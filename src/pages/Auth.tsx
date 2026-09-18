@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { BookOpen, Loader2, Eye, EyeOff, ArrowRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { lovable } from "@/integrations/lovable/index";
 
 const emailSchema = z.string().email("כתובת אימייל לא תקינה");
 const passwordSchema = z.string().min(6, "סיסמה חייבת להכיל לפחות 6 תווים");
