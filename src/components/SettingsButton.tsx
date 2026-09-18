@@ -1,11 +1,14 @@
-import { useState, lazy, Suspense } from "react";
-import { Settings, Check, Palette, ChevronRight, Pipette, Code2, Bug, Zap, Library } from "lucide-react";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { Settings, Check, Palette, ChevronRight, Pipette, Code2, Bug, Zap, Library, DatabaseBackup } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 const DevMigrationsPanel = lazy(() => import("@/components/DevMigrationsPanel"));
 const DevConsoleMonitor = lazy(() => import("@/components/DevConsoleMonitor"));
 const DevPerformanceMonitor = lazy(() => import("@/components/DevPerformanceMonitor"));
+const DataBackupPanel = lazy(() => import("@/components/backup/DataBackupPanel"));
+import { useAuth } from "@/hooks/useAuth";
+import { isCurrentUserAdmin } from "@/lib/backup/engine";
 import {
   Popover,
   PopoverContent,
@@ -36,6 +39,17 @@ export function SettingsButton() {
   const [showDevPanel, setShowDevPanel] = useState(false);
   const [showDevTab, setShowDevTab] = useState(false);
   const [localColors, setLocalColors] = useState<CustomColors>(customColors);
+  const [showBackupPanel, setShowBackupPanel] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    isCurrentUserAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
+  }, [user]);
   
   // Dev tools toggles — persisted in localStorage
   const [consoleMonitorEnabled, setConsoleMonitorEnabled] = useState(() => localStorage.getItem("dev-console-enabled") === "true");
@@ -112,6 +126,10 @@ export function SettingsButton() {
       )}
 
       <Suspense fallback={null}>
+        {showBackupPanel && <DataBackupPanel open={showBackupPanel} onOpenChange={setShowBackupPanel} />}
+      </Suspense>
+
+      <Suspense fallback={null}>
         {showDevPanel && (
           <DevMigrationsPanel open={showDevPanel} onClose={() => setShowDevPanel(false)} />
         )}
@@ -182,6 +200,23 @@ export function SettingsButton() {
                   </button>
                 ))}
               </div>
+
+              {/* Data backup & restore — admins only */}
+              {isAdmin && (
+                <div className="mt-3 pt-2 border-t border-border">
+                  <button
+                    onClick={() => setShowBackupPanel(true)}
+                    className="w-full flex items-center gap-3 p-2 rounded-lg transition-all hover:bg-muted/50"
+                  >
+                    <DatabaseBackup className="w-4 h-4 text-green-600" />
+                    <div className="flex-1 text-right">
+                      <div className="font-medium text-sm">גיבוי ושחזור נתונים</div>
+                      <div className="text-xs text-muted-foreground">גיבוי לפי נושאים, שחזור מלא או חלקי</div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground rotate-180" />
+                  </button>
+                </div>
+              )}
 
               {/* Dev Tools Section */}
               <div className="mt-3 pt-2 border-t border-border">
