@@ -90,14 +90,22 @@ function persistPrompts(prompts: SavedPrompt[]) {
 // ─── FAB position persistence (localStorage + Supabase cross-device) ───
 const FAB_POS_KEY = "ai-tutor-fab-position";
 
+// The global settings button sits fixed at bottom-6 right-6 (48px). The AI
+// button has a higher z-index, so if it lands on that corner it hides the
+// settings button completely; keep it just above instead.
+const FAB_SIZE = 48;
+const SETTINGS_CORNER = 24 + 48 + 8; // offset + button + breathing room
+
 function clampFabPos(pos: { x: number; y: number }): { x: number; y: number } {
   if (typeof window === "undefined") return pos;
   const maxX = Math.max(0, window.innerWidth - 60);
   const maxY = Math.max(0, window.innerHeight - 60);
-  return {
-    x: Math.min(Math.max(0, pos.x), maxX),
-    y: Math.min(Math.max(0, pos.y), maxY),
-  };
+  const x = Math.min(Math.max(0, pos.x), maxX);
+  let y = Math.min(Math.max(0, pos.y), maxY);
+  const inSettingsCorner =
+    x + FAB_SIZE > window.innerWidth - SETTINGS_CORNER && y + FAB_SIZE > window.innerHeight - SETTINGS_CORNER;
+  if (inSettingsCorner) y = Math.max(0, window.innerHeight - SETTINGS_CORNER - FAB_SIZE - 8);
+  return { x, y };
 }
 
 function loadFabPosLocal(): { x: number; y: number } | null {
@@ -192,10 +200,10 @@ export default function AiTutorChat() {
   const [fabPos, setFabPos] = useState(() => {
     const stored = loadFabPosLocal();
     if (stored) return stored;
-    return {
+    return clampFabPos({
       x: typeof window !== "undefined" ? window.innerWidth - 80 : 300,
       y: typeof window !== "undefined" ? window.innerHeight - 80 : 400,
-    };
+    });
   });
   const [isFabDragging, setIsFabDragging] = useState(false);
   const fabDragOffset = useRef({ x: 0, y: 0 });

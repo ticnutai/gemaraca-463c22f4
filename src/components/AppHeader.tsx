@@ -1,4 +1,4 @@
-import { Info, BookOpen, Scale, Search, Upload, Library, User, LogOut, LogIn, ArrowDownToLine, BookMarked, History, CalendarDays, GitCompareArrows, Share2, MoreHorizontal, Menu, Type } from "lucide-react";
+import { DatabaseBackup, Info, BookOpen, Scale, Search, Upload, Library, User, LogOut, LogIn, ArrowDownToLine, BookMarked, History, CalendarDays, GitCompareArrows, Share2, MoreHorizontal, Menu, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -53,9 +53,12 @@ const moreTabs = tabs.slice(7);
 const mobileMainTabs = tabs.slice(0, 4);
 const mobileMoreTabs = tabs.slice(4);
 
+const DataBackupPanel = lazy(() => import("@/components/backup/DataBackupPanel"));
+
 const AppHeader = ({ activeTab, onTabChange }: AppHeaderProps) => {
   const { user, isAuthenticated, signOut } = useAuth();
   const isAdmin = useIsAdmin();
+  const [showBackup, setShowBackup] = useState(false);
   const navigate = useNavigate();
   const { setOpen } = useSidebar();
   const { settings, updateSettings } = usePageTypography();
@@ -68,6 +71,11 @@ const AppHeader = ({ activeTab, onTabChange }: AppHeaderProps) => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-accent/30 bg-primary shadow-lg safe-area-top">
+      {showBackup && (
+        <Suspense fallback={null}>
+          <DataBackupPanel open={showBackup} onOpenChange={setShowBackup} />
+        </Suspense>
+      )}
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
         {/* Right side - Logo and title */}
         <div className="flex items-center gap-4">
@@ -169,6 +177,15 @@ const AppHeader = ({ activeTab, onTabChange }: AppHeaderProps) => {
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem onClick={() => setShowBackup(true)} className="cursor-pointer">
+                      <DatabaseBackup className="h-4 w-4 ms-2 text-green-600" />
+                      גיבוי ושחזור נתונים
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                   <LogOut className="h-4 w-4 ms-2" />
                   התנתק
