@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { BookOpen, Loader2, Eye, EyeOff, ArrowRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { lovable } from "@/integrations/lovable/index";
 
 const emailSchema = z.string().email("כתובת אימייל לא תקינה");
 const passwordSchema = z.string().min(6, "סיסמה חייבת להכיל לפחות 6 תווים");
@@ -204,6 +205,25 @@ export default function Auth() {
     toast.success("קישור לאיפוס סיסמה נשלח לאימייל שלך");
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+
+    if (result.error) {
+      setIsLoading(false);
+      toast.error("ההתחברות עם גוגל נכשלה — נסה שוב");
+      return;
+    }
+
+    if (result.redirected) return;
+
+    setIsLoading(false);
+    toast.success("התחברת בהצלחה!");
+    navigate("/");
+  };
+
   const switchMode = (newMode: AuthMode) => {
     setMode(newMode);
     setShowPassword(false);
@@ -342,6 +362,34 @@ export default function Auth() {
               </button>
             )}
           </form>
+
+          {mode !== "forgot" && (
+            <div className="mt-6">
+              <div className="relative mb-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">או</span>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                disabled={isLoading}
+                onClick={handleGoogleSignIn}
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.4a5.5 5.5 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.6-5.2 3.6-8.8Z" />
+                  <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.9-3a7.2 7.2 0 0 1-4 1.1 7.1 7.1 0 0 1-6.7-4.9H1.3v3.1A12 12 0 0 0 12 24Z" />
+                  <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1Z" />
+                  <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1A7.1 7.1 0 0 1 12 4.8Z" />
+                </svg>
+                המשך עם גוגל
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
