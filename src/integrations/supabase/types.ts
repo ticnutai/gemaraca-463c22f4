@@ -10,10 +10,127 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      data_backups: {
+        Row: {
+          buckets: Json
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          id: string
+          kind: string
+          label: string
+          notes: string | null
+          status: string
+          storage_path: string | null
+          tables: Json
+          topics: string[]
+          total_bytes: number
+          total_rows: number
+        }
+        Insert: {
+          buckets?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          kind?: string
+          label: string
+          notes?: string | null
+          status?: string
+          storage_path?: string | null
+          tables?: Json
+          topics?: string[]
+          total_bytes?: number
+          total_rows?: number
+        }
+        Update: {
+          buckets?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          kind?: string
+          label?: string
+          notes?: string | null
+          status?: string
+          storage_path?: string | null
+          tables?: Json
+          topics?: string[]
+          total_bytes?: number
+          total_rows?: number
+        }
+        Relationships: []
+      }
+      data_restores: {
+        Row: {
+          backup_id: string | null
+          buckets: Json
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          id: string
+          mode: string
+          safety_backup_id: string | null
+          source: string
+          source_name: string | null
+          status: string
+          tables: Json
+        }
+        Insert: {
+          backup_id?: string | null
+          buckets?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          mode: string
+          safety_backup_id?: string | null
+          source?: string
+          source_name?: string | null
+          status?: string
+          tables?: Json
+        }
+        Update: {
+          backup_id?: string | null
+          buckets?: Json
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          mode?: string
+          safety_backup_id?: string | null
+          source?: string
+          source_name?: string | null
+          status?: string
+          tables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_restores_backup_id_fkey"
+            columns: ["backup_id"]
+            isOneToOne: false
+            referencedRelation: "data_backups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_restores_safety_backup_id_fkey"
+            columns: ["safety_backup_id"]
+            isOneToOne: false
+            referencedRelation: "data_backups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faq_items: {
         Row: {
           answer: string
@@ -999,6 +1116,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      backup_assert_admin: { Args: never; Returns: undefined }
+      backup_catalog: { Args: never; Returns: Json }
+      backup_delete_missing: {
+        Args: { p_keep: string[]; p_table: string }
+        Returns: Json
+      }
+      backup_excluded_tables: { Args: never; Returns: string[] }
+      backup_export_rows: {
+        Args: { p_after?: string; p_limit?: number; p_table: string }
+        Returns: Json
+      }
+      backup_restore_rows: {
+        Args: { p_mode?: string; p_rows: Json; p_table: string }
+        Returns: Json
+      }
+      backup_storage_manifest: {
+        Args: { p_after?: string; p_bucket: string; p_limit?: number }
+        Returns: Json
+      }
+      backup_table_pk: { Args: { p_table: string }; Returns: string }
       exec_sql: { Args: { query: string }; Returns: Json }
       has_role: {
         Args: {
@@ -1025,12 +1162,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1054,11 +1191,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1079,11 +1216,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1104,11 +1241,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1121,11 +1258,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
