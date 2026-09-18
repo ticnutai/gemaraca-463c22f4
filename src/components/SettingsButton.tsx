@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Settings, Check, Palette, ChevronRight, Pipette, Code2, Bug, Zap, Library, DatabaseBackup } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -7,8 +7,7 @@ const DevMigrationsPanel = lazy(() => import("@/components/DevMigrationsPanel"))
 const DevConsoleMonitor = lazy(() => import("@/components/DevConsoleMonitor"));
 const DevPerformanceMonitor = lazy(() => import("@/components/DevPerformanceMonitor"));
 const DataBackupPanel = lazy(() => import("@/components/backup/DataBackupPanel"));
-import { useAuth } from "@/hooks/useAuth";
-import { isCurrentUserAdmin } from "@/lib/backup/admin";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 const AutoBackupRunner = lazy(() => import("@/components/backup/AutoBackupRunner"));
 import {
   Popover,
@@ -41,16 +40,7 @@ export function SettingsButton() {
   const [showDevTab, setShowDevTab] = useState(false);
   const [localColors, setLocalColors] = useState<CustomColors>(customColors);
   const [showBackupPanel, setShowBackupPanel] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const { user } = useAuth();
-
-  useEffect(() => {
-    if (!user) {
-      setIsAdmin(false);
-      return;
-    }
-    isCurrentUserAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
-  }, [user]);
+  const isAdmin = useIsAdmin() === true;
   
   // Dev tools toggles — persisted in localStorage
   const [consoleMonitorEnabled, setConsoleMonitorEnabled] = useState(() => localStorage.getItem("dev-console-enabled") === "true");

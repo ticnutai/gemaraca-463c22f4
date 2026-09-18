@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useNavigate } from "react-router-dom";
 import { lazy, Suspense, useState } from "react";
 import {
@@ -54,6 +55,7 @@ const mobileMoreTabs = tabs.slice(4);
 
 const AppHeader = ({ activeTab, onTabChange }: AppHeaderProps) => {
   const { user, isAuthenticated, signOut } = useAuth();
+  const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const { setOpen } = useSidebar();
   const { settings, updateSettings } = usePageTypography();
@@ -141,15 +143,30 @@ const AppHeader = ({ activeTab, onTabChange }: AppHeaderProps) => {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="text-primary-foreground hover:bg-primary-foreground/10"
+                  className="text-primary-foreground hover:bg-primary-foreground/10 h-10 gap-1.5 px-2"
+                  title={isAdmin ? "מחובר כמנהל" : "מחובר כמשתמש רגיל"}
                 >
                   <User className="h-5 w-5" />
+                  {isAdmin !== null && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-px text-[10px] font-semibold leading-4",
+                        isAdmin ? "bg-accent text-accent-foreground" : "bg-primary-foreground/15 text-primary-foreground/80",
+                      )}
+                    >
+                      {isAdmin ? "מנהל" : "משתמש"}
+                    </span>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="text-right">
-                <DropdownMenuItem disabled className="text-xs text-muted-foreground">
-                  {user?.email}
+                <DropdownMenuItem disabled className="flex-col items-end gap-0.5 text-xs text-muted-foreground opacity-100">
+                  <span>{user?.email}</span>
+                  {isAdmin !== null && (
+                    <span className={cn("font-semibold", isAdmin ? "text-accent" : "")}>
+                      {isAdmin ? "מנהל מערכת" : "משתמש רגיל"}
+                    </span>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
