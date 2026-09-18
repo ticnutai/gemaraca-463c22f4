@@ -12,6 +12,8 @@ import {
   Loader2,
   RefreshCw,
   ShieldCheck,
+  ShieldQuestion,
+  Timer,
   Trash2,
   Upload,
   XCircle,
@@ -36,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress as ProgressBar } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -44,7 +47,15 @@ import {
   backupFileName,
   canStreamToDisk,
   createBackup,
+  DEFAULT_AUTO_SETTINGS,
+  daysSince,
   deleteBackup,
+  getAutoBackupSettings,
+  lastCloudBackup,
+  saveAutoBackupSettings,
+  verifyCloudBackup,
+  type AutoBackupSettings,
+  type VerifyResult,
   exportCloudBackupToZip,
   formatBytes,
   listBackups,
@@ -75,6 +86,7 @@ const KIND_LABEL: Record<BackupRow["kind"], string> = {
   download: "הורדה",
   both: "ענן + הורדה",
   safety: "גיבוי ביטחון",
+  auto: "אוטומטי",
 };
 
 const STATUS_LABEL: Record<BackupRow["status"], string> = {
@@ -235,7 +247,7 @@ function BackupTab({ catalog, onDone, onBusy }: { catalog: Catalog; onDone: () =
 
       <div className="rounded-lg border border-border p-3 space-y-3">
         <Label className="font-semibold">לאן לשמור?</Label>
-        <RadioGroup value={destination} onValueChange={(v) => setDestination(v as Destination)} className="gap-2">
+        <RadioGroup dir="rtl" value={destination} onValueChange={(v) => setDestination(v as Destination)} className="gap-2">
           {([
             ["both", Cloud, "ענן + הורדה למחשב (מומלץ)", "עותק נתונים בענן לשחזור מהיר, וקובץ ZIP מלא עם כל הקבצים במחשב"],
             ["download", HardDriveDownload, "הורדה למחשב בלבד", "קובץ ZIP אחד עם הנתונים וכל הקבצים שנבחרו"],
@@ -306,6 +318,106 @@ function BackupTab({ catalog, onDone, onBusy }: { catalog: Catalog; onDone: () =
   );
 }
 
+// ─── Backup status & automatic backups ─────────────────────────────────────
+
+function ageText(days: number) {
+  if (days < 1 / 24) return "לפני פחות משעה";
+  if (days < 1) return `לפני ${Math.round(days * 24)} שעות`;
+  if (days < 2) return "אתמול";
+  return `לפני ${Math.round(days)} ימים`;
+}
+
+function BackupStatusCard({ backups }: { backups: BackupRow[] }) {
+  const [settings, setSettings] = useState<AutoBackupSettings>(() => getAutoBackupSettings());
+  const last = lastCloudBackup(backups);
+  const age = last ? daysSince(last.created_at) : Infinity;
+  const level = age <= settings.intervalDays ? "ok" : age <= settings.intervalDays * 2 ? "warn" : "bad";
+
+  const update = (next: AutoBackupSettings) => {
+    setSettings(next);
+    saveAutoBackupSettings(next);
+  };
+
+  const selectCls = "h-8 rounded-md border border-input bg-background px-2 text-sm";
+  return (
+    <div
+      className={cn(
+        "rounded-lg border p-3 space-y-3",
+        level === "ok"
+          ? "border-green-500/30 bg-green-500/5"
+          : level === "warn"
+            ? "border-yellow-500/40 bg-yellow-500/10"
+            : "border-destructive/40 bg-destructive/5",
+      )}
+    >
+      <div className="flex items-center gap-2 text-sm flex-wrap">
+        {level === "ok" ? (
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+        ) : (
+          <AlertTriangle className={cn("h-4 w-4", level === "warn" ? "text-yellow-600" : "text-destructive")} />
+        )}
+        <span className="font-medium">{last ? <>הגיבוי האחרון בענן: {ageText(age)}</> : "עדיין אין גיבוי בענן"}</span>
+        {last && (
+          <span className="text-xs text-muted-foreground">
+            ({dateTime(last.created_at)} · {n(last.total_rows)} שורות)
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <label className="flex items-center gap-2 cursor-pointer">
+          {/* the shadcn Switch animates with translate-x, which only works left-to-right */}
+          <span dir="ltr" className="inline-flex">
+            <Switch checked={settings.enabled} onCheckedChange={(v) => update({ ...settings, enabled: v })} />
+          </span>
+          <Timer className="h-4 w-4 text-muted-foreground" />
+          גיבוי אוטומטי לענן
+        </label>
+        <label className={cn("flex items-center gap-2", !settings.enabled && "opacity-50")}>
+          כל
+          <select
+            className={selectCls}
+            value={settings.intervalDays}
+            disabled={!settings.enabled}
+            onChange={(e) => update({ ...settings, intervalDays: Number(e.target.value) })}
+          >
+            <option value={1}>יום</option>
+            <option value={3}>3 ימים</option>
+            <option value={7}>שבוע</option>
+            <option value={14}>שבועיים</option>
+            <option value={30}>חודש</option>
+          </select>
+        </label>
+        <label className={cn("flex items-center gap-2", !settings.enabled && "opacity-50")}>
+          לשמור
+          <select
+            className={selectCls}
+            value={settings.keepAuto}
+            disabled={!settings.enabled}
+            onChange={(e) => update({ ...settings, keepAuto: Number(e.target.value) })}
+          >
+            {[3, 6, 10, 20].map((k) => (
+              <option key={k} value={k}>
+                {k}
+              </option>
+            ))}
+          </select>
+          גיבויים אוטומטיים אחרונים
+        </label>
+        {JSON.stringify(settings) !== JSON.stringify(DEFAULT_AUTO_SETTINGS) && (
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => update(DEFAULT_AUTO_SETTINGS)}>
+            ברירת מחדל
+          </Button>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        הגיבוי האוטומטי רץ ברקע כשמנהל פותח את האתר והגיע זמנו. הוא מגבה את כל הטבלאות ואת רשימת הקבצים. גיבויים
+        אוטומטיים ישנים, וגיבויי ביטחון מעבר ל-{settings.keepSafety} האחרונים, נמחקים. גיבויים ידניים לא נמחקים אף פעם.
+      </p>
+    </div>
+  );
+}
+
 // ─── History tab ───────────────────────────────────────────────────────────
 
 function HistoryTab({
@@ -324,6 +436,7 @@ function HistoryTab({
   const [toDelete, setToDelete] = useState<BackupRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<Progress | null>(null);
+  const [verified, setVerified] = useState<Record<string, VerifyResult>>({});
   const backupById = useMemo(() => new Map(backups.map((b) => [b.id, b])), [backups]);
 
   const download = async (row: BackupRow) => {
@@ -335,6 +448,24 @@ function HistoryTab({
       toast({ title: "הקובץ נשמר במחשב" });
     } catch (e) {
       toast({ title: "ההורדה נכשלה", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+    } finally {
+      setBusyId(null);
+      setExportProgress(null);
+    }
+  };
+
+  const verify = async (row: BackupRow) => {
+    setBusyId(row.id);
+    try {
+      const r = await verifyCloudBackup(row, (p) => setExportProgress({ ...p }));
+      setVerified((v) => ({ ...v, [row.id]: r }));
+      toast({
+        title: r.ok ? "הגיבוי תקין" : "נמצאו בעיות בגיבוי",
+        description: r.ok ? `${n(r.rows)} שורות ב-${r.tables} טבלאות נקראו בהצלחה` : r.problems.slice(0, 3).join(" · "),
+        variant: r.ok ? undefined : "destructive",
+      });
+    } catch (e) {
+      toast({ title: "הבדיקה נכשלה", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {
       setBusyId(null);
       setExportProgress(null);
@@ -359,6 +490,8 @@ function HistoryTab({
 
   return (
     <div className="space-y-4">
+      <BackupStatusCard backups={backups} />
+
       <div className="flex items-center gap-2">
         <h3 className="font-semibold text-sm flex-1">גיבויים ({backups.length})</h3>
         <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading} className="gap-1">
@@ -392,6 +525,13 @@ function HistoryTab({
                 </div>
                 {b.notes && <div className="text-xs mt-1">{b.notes}</div>}
                 {b.error_message && <div className="text-xs text-destructive mt-1">{b.error_message}</div>}
+                {verified[b.id] && (
+                  <div className={cn("text-xs mt-1", verified[b.id].ok ? "text-green-700 dark:text-green-400" : "text-destructive")}>
+                    {verified[b.id].ok
+                      ? `✓ נבדק עכשיו: ${n(verified[b.id].rows)} שורות נקראו בהצלחה`
+                      : verified[b.id].problems.map((p, i) => <div key={i}>{p}</div>)}
+                  </div>
+                )}
               </div>
               <div className="flex gap-1 shrink-0">
                 {b.storage_path && (b.status === "completed" || b.status === "partial") && (
@@ -403,6 +543,16 @@ function HistoryTab({
                     <Button size="sm" variant="outline" className="h-7 gap-1" onClick={() => download(b)} disabled={!!busyId}>
                       {busyId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                       ZIP
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => verify(b)}
+                      disabled={!!busyId}
+                      title="בדיקת תקינות"
+                    >
+                      <ShieldQuestion className="h-3.5 w-3.5" />
                     </Button>
                   </>
                 )}
@@ -690,7 +840,7 @@ function RestoreTab({
 
           <div className="rounded-lg border border-border p-3 space-y-3">
             <Label className="font-semibold">איך לשחזר?</Label>
-            <RadioGroup value={mode} onValueChange={(v) => setMode(v as RestoreMode)} className="gap-2">
+            <RadioGroup dir="rtl" value={mode} onValueChange={(v) => setMode(v as RestoreMode)} className="gap-2">
               {([
                 ["missing", "הוספת חסרים בלבד (בטוח)", "מחזיר שורות שנמחקו. שורות קיימות לא משתנות"],
                 ["upsert", "עדכון ודריסה", "מחזיר שורות שנמחקו, ושורות קיימות חוזרות לגרסה שבגיבוי. שורות חדשות נשארות"],
@@ -729,7 +879,7 @@ function RestoreTab({
             {selBuckets.length > 0 && (
               <div className="space-y-1.5">
                 <Label className="text-xs">קבצים שכבר קיימים:</Label>
-                <RadioGroup value={fileMode} onValueChange={(v) => setFileMode(v as FileRestoreMode)} className="flex gap-4">
+                <RadioGroup dir="rtl" value={fileMode} onValueChange={(v) => setFileMode(v as FileRestoreMode)} className="flex gap-4">
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <RadioGroupItem value="missing" /> לדלג (להחזיר רק חסרים)
                   </label>
@@ -934,7 +1084,8 @@ export default function DataBackupPanel({ open, onOpenChange }: { open: boolean;
       }}
     >
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0" dir="rtl">
-        <DialogHeader className="px-5 pt-5 pb-3 border-b border-border text-right">
+        {/* pr-12 keeps the title clear of the close button, which sits at the physical right */}
+        <DialogHeader className="px-5 pr-12 pt-5 pb-3 border-b border-border text-right">
           <DialogTitle className="flex items-center gap-2">
             <DatabaseBackup className="h-5 w-5 text-primary" />
             גיבוי ושחזור נתונים
@@ -959,24 +1110,24 @@ export default function DataBackupPanel({ open, onOpenChange }: { open: boolean;
             <Loader2 className="h-4 w-4 animate-spin" /> טוען את מבנה הנתונים…
           </div>
         ) : (
-          <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col min-h-0">
-            <TabsList className="mx-5 mt-3 grid grid-cols-3">
-              <TabsTrigger value="backup" className="gap-1.5">
-                <DatabaseBackup className="h-4 w-4" /> גיבוי חדש
+          <Tabs dir="rtl" value={tab} onValueChange={setTab} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="mx-3 sm:mx-5 mt-3 grid grid-cols-3">
+              <TabsTrigger value="backup" className="gap-1.5 text-xs sm:text-sm px-1">
+                <DatabaseBackup className="h-4 w-4 hidden sm:block" /> גיבוי חדש
               </TabsTrigger>
-              <TabsTrigger value="history" className="gap-1.5">
-                <History className="h-4 w-4" /> גיבויים שמורים
+              <TabsTrigger value="history" className="gap-1.5 text-xs sm:text-sm px-1">
+                <History className="h-4 w-4 hidden sm:block" /> גיבויים שמורים
                 {backups.length > 0 && (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                     {backups.length}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="restore" className="gap-1.5">
-                <ArchiveRestore className="h-4 w-4" /> שחזור
+              <TabsTrigger value="restore" className="gap-1.5 text-xs sm:text-sm px-1">
+                <ArchiveRestore className="h-4 w-4 hidden sm:block" /> שחזור
               </TabsTrigger>
             </TabsList>
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-3">
+            <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-5 pt-3">
               <TabsContent value="backup" className="mt-0" forceMount hidden={tab !== "backup"}>
                 <BackupTab catalog={catalog} onDone={afterChange} onBusy={setBackupBusy} />
               </TabsContent>

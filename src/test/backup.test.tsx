@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { orderByDependencies } from "@/lib/backup/engine";
+import { backupsToPrune, lastCloudBackup, orderByDependencies, type BackupRow } from "@/lib/backup/engine";
 import { resolveTopics } from "@/lib/backup/topics";
 
 const catalog = {
@@ -43,6 +43,35 @@ describe("backup topics", () => {
       psak_sections: ["psakei_din"],
     });
     expect(order.indexOf("psakei_din")).toBeLessThan(order.indexOf("psak_sections"));
+  });
+});
+
+const row = (id: string, kind: BackupRow["kind"], daysAgo: number, extra: Partial<BackupRow> = {}): BackupRow => ({
+  id, label: id, notes: null, kind, status: "completed", topics: [], tables: {}, buckets: {}, total_rows: 0, total_bytes: 0,
+  storage_path: kind === "download" ? null : id, error_message: null,
+  created_at: new Date(Date.now() - daysAgo * 86_400_000).toISOString(), completed_at: null, ...extra,
+});
+
+describe("retention and status", () => {
+  const settings = { enabled: true, intervalDays: 7, keepAuto: 2, keepSafety: 1 };
+
+  it("prunes only the oldest automatic and safety backups, never manual ones", () => {
+    const backups = [
+      row("auto-new", "auto", 1), row("auto-mid", "auto", 8), row("auto-old", "auto", 15),
+      row("safety-new", "safety", 2), row("safety-old", "safety", 20),
+      row("manual-ancient", "cloud", 400), row("download", "download", 3),
+      row("auto-running", "auto", 30, { status: "running" }),
+    ];
+    expect(backupsToPrune(backups, settings).map((b) => b.id).sort()).toEqual(["auto-old", "safety-old"]);
+  });
+
+  it("the last cloud backup ignores safety copies, downloads and failures", () => {
+    const backups = [
+      row("safety", "safety", 0.1), row("download", "download", 0.2), row("failed", "cloud", 0.3, { status: "failed" }),
+      row("auto", "auto", 2), row("manual", "both", 5),
+    ];
+    expect(lastCloudBackup(backups)?.id).toBe("auto");
+    expect(lastCloudBackup([])).toBeNull();
   });
 });
 

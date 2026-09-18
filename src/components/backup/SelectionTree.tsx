@@ -53,17 +53,17 @@ export function SelectionTree({ topics, info, selected, onChange }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 pb-2 border-b border-border">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pb-2 border-b border-border">
         <Checkbox
           id="select-all"
           checked={allSelected ? true : noneSelected ? false : "indeterminate"}
           onCheckedChange={() => setMany(allKeys, !allSelected)}
           className="data-[state=indeterminate]:bg-primary/40"
         />
-        <label htmlFor="select-all" className="font-semibold text-sm cursor-pointer">
+        <label htmlFor="select-all" className="font-semibold text-sm cursor-pointer whitespace-nowrap">
           בחר הכל
         </label>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
           ({allKeys.filter((k) => selected.has(k)).length} מתוך {allKeys.length})
         </span>
         <div className="flex-1" />
@@ -103,7 +103,7 @@ export function SelectionTree({ topics, info, selected, onChange }: Props) {
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">{topic.label}</span>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                      {count}/{keys.length}
+                      {keys.length === 0 ? "לא זמין" : `${count}/${keys.length}`}
                     </Badge>
                     {topicBytes > 0 && <span className="text-[11px] text-muted-foreground">{formatBytes(topicBytes)}</span>}
                   </div>

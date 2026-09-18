@@ -8,7 +8,8 @@ const DevConsoleMonitor = lazy(() => import("@/components/DevConsoleMonitor"));
 const DevPerformanceMonitor = lazy(() => import("@/components/DevPerformanceMonitor"));
 const DataBackupPanel = lazy(() => import("@/components/backup/DataBackupPanel"));
 import { useAuth } from "@/hooks/useAuth";
-import { isCurrentUserAdmin } from "@/lib/backup/engine";
+import { isCurrentUserAdmin } from "@/lib/backup/admin";
+const AutoBackupRunner = lazy(() => import("@/components/backup/AutoBackupRunner"));
 import {
   Popover,
   PopoverContent,
@@ -127,6 +128,7 @@ export function SettingsButton() {
 
       <Suspense fallback={null}>
         {showBackupPanel && <DataBackupPanel open={showBackupPanel} onOpenChange={setShowBackupPanel} />}
+        {isAdmin && <AutoBackupRunner />}
       </Suspense>
 
       <Suspense fallback={null}>

@@ -96,7 +96,7 @@ export interface BackupRow {
   id: string;
   label: string;
   notes: string | null;
-  kind: "cloud" | "download" | "both" | "safety";
+  kind: "cloud" | "download" | "both" | "safety" | "auto";
   status: "running" | "completed" | "partial" | "failed" | "cancelled";
   topics: string[];
   tables: Record<string, number>;
@@ -226,11 +226,12 @@ async function pool<T>(items: T[], limit: number, worker: (item: T) => Promise<v
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
 }
 
+/** Wrapped in LTR isolates so "58.0 MB" does not flip to "MB 58.0" inside Hebrew text. */
 export function formatBytes(bytes: number): string {
-  if (!bytes) return "0 B";
+  if (!bytes) return "\u20660 B\u2069";
   const units = ["B", "KB", "MB", "GB"];
   const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
-  return `${(bytes / 1024 ** i).toFixed(i ? 1 : 0)} ${units[i]}`;
+  return `\u2066${(bytes / 1024 ** i).toFixed(i ? 1 : 0)} ${units[i]}\u2069`;
 }
 
 /** Parents before children, using the FK list; cycles fall back to name order. */
@@ -255,12 +256,7 @@ export async function loadCatalog(signal?: AbortSignal): Promise<Catalog> {
   return await rpc<Catalog>("backup_catalog", undefined, signal);
 }
 
-export async function isCurrentUserAdmin(): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-  const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-  return data === true;
-}
+export { isCurrentUserAdmin } from "./admin";
 
 export async function listBackups(): Promise<BackupRow[]> {
   const { data, error } = await db.from("data_backups").select("*").order("created_at", { ascending: false }).limit(200);
@@ -774,7 +770,7 @@ export async function restoreBackup(opts: RestoreOptions): Promise<RestoreResult
       buckets: [],
       toCloud: true,
       zip: null,
-      label: `גיבוי ביטחון לפני שחזור "${source.name}"`,
+      label: `גיבוי ביטחון (לפני שחזור של ${source.name})`,
       kind: "safety",
       signal,
       onProgress: (p) => emit({ message: `גיבוי ביטחון: ${p.message}` }),
@@ -896,5 +892,165 @@ export async function restoreBackup(opts: RestoreOptions): Promise<RestoreResult
       completed_at: new Date().toISOString(),
     });
     throw e;
+  }
+}
+
+// ─── Integrity check ───────────────────────────────────────────────────────
+
+export interface VerifyResult {
+  ok: boolean;
+  tables: number;
+  rows: number;
+  problems: string[];
+}
+
+/** Reads every chunk of a cloud backup back and checks it against its manifest. */
+export async function verifyCloudBackup(row: BackupRow, onProgress?: ProgressFn, signal?: AbortSignal): Promise<VerifyResult> {
+  const source = await openCloudSource(row);
+  const m = source.manifest;
+  const problems: string[] = [];
+  const progress: Progress = {
+    stage: "tables",
+    message: "בודק תקינות…",
+    rowsDone: 0,
+    rowsTotal: Object.values(m.tables).reduce((s, t) => s + t.rows, 0),
+    filesDone: 0,
+    filesTotal: 0,
+  };
+  let rows = 0;
+  for (const [table, info] of Object.entries(m.tables)) {
+    let count = 0;
+    const ids = new Set<string>();
+    for (let n = 1; n <= info.chunks; n++) {
+      checkAbort(signal);
+      try {
+        const chunk = await source.readChunk(table, n);
+        chunk.forEach((r) => ids.add(String(r[info.pk])));
+        count += chunk.length;
+        progress.rowsDone += chunk.length;
+        onProgress?.({ ...progress, message: `בודק ${table}…` });
+      } catch (e) {
+        problems.push(`${table}: חלק ${n} לא נקרא (${e instanceof Error ? e.message : e})`);
+      }
+    }
+    if (count !== info.rows) problems.push(`${table}: בגיבוי ${info.rows} שורות, נקראו ${count}`);
+    if (ids.size !== count) problems.push(`${table}: ${count - ids.size} מפתחות כפולים`);
+    rows += count;
+  }
+  for (const [bucket, info] of Object.entries(m.buckets)) {
+    try {
+      const index = await source.readFileIndex(bucket);
+      if (index.length !== info.files) problems.push(`${bucket}: ברשימה ${index.length} קבצים במקום ${info.files}`);
+    } catch (e) {
+      problems.push(`${bucket}: רשימת הקבצים לא נקראה (${e instanceof Error ? e.message : e})`);
+    }
+  }
+  onProgress?.({ ...progress, stage: "done", message: problems.length ? "נמצאו בעיות" : "הגיבוי תקין" });
+  return { ok: problems.length === 0, tables: Object.keys(m.tables).length, rows, problems };
+}
+
+// ─── Automatic backups & retention ─────────────────────────────────────────
+
+export interface AutoBackupSettings {
+  enabled: boolean;
+  intervalDays: number;
+  /** how many automatic backups to keep; older ones are deleted */
+  keepAuto: number;
+  /** how many safety backups (made before restores) to keep */
+  keepSafety: number;
+}
+
+const SETTINGS_KEY = "gemaraca-auto-backup";
+const LOCK_KEY = "gemaraca-auto-backup-lock";
+const LOCK_MS = 30 * 60_000;
+
+export const DEFAULT_AUTO_SETTINGS: AutoBackupSettings = { enabled: true, intervalDays: 7, keepAuto: 6, keepSafety: 5 };
+
+export function getAutoBackupSettings(): AutoBackupSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? { ...DEFAULT_AUTO_SETTINGS, ...JSON.parse(raw) } : DEFAULT_AUTO_SETTINGS;
+  } catch {
+    return DEFAULT_AUTO_SETTINGS;
+  }
+}
+
+export function saveAutoBackupSettings(s: AutoBackupSettings) {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  } catch {
+    /* private mode: settings just won't persist */
+  }
+}
+
+/** The newest backup that holds a restorable copy of the data in the cloud. */
+export function lastCloudBackup(backups: BackupRow[]): BackupRow | null {
+  return (
+    backups
+      .filter((b) => b.storage_path && (b.status === "completed" || b.status === "partial") && b.kind !== "safety")
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null
+  );
+}
+
+export const daysSince = (iso: string) => (Date.now() - new Date(iso).getTime()) / 86_400_000;
+
+/** Deletes the oldest automatic and safety backups beyond the limits. Manual backups are never touched. */
+export function backupsToPrune(backups: BackupRow[], settings: AutoBackupSettings): BackupRow[] {
+  const newestFirst = [...backups].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return [
+    ...newestFirst.filter((b) => b.kind === "auto" && b.status !== "running").slice(settings.keepAuto),
+    ...newestFirst.filter((b) => b.kind === "safety" && b.status !== "running").slice(settings.keepSafety),
+  ];
+}
+
+export async function applyRetention(settings: AutoBackupSettings, backups?: BackupRow[]): Promise<number> {
+  const excess = backupsToPrune(backups ?? (await listBackups()), settings);
+  for (const b of excess) await deleteBackup(b);
+  return excess.length;
+}
+
+/**
+ * Runs a cloud backup of all data if automatic backups are on and the last one
+ * is older than the interval. Returns the result, or null when nothing was due.
+ * A localStorage lock keeps two open tabs from running it at the same time.
+ */
+export async function runAutoBackupIfDue(onProgress?: ProgressFn, signal?: AbortSignal): Promise<BackupResult | null> {
+  const settings = getAutoBackupSettings();
+  if (!settings.enabled) return null;
+
+  const backups = await listBackups();
+  const last = lastCloudBackup(backups);
+  if (last && daysSince(last.created_at) < settings.intervalDays) return null;
+  if (backups.some((b) => b.status === "running" && daysSince(b.created_at) * 86_400_000 < LOCK_MS)) return null;
+
+  try {
+    const lock = Number(localStorage.getItem(LOCK_KEY) ?? 0);
+    if (Date.now() - lock < LOCK_MS) return null;
+    localStorage.setItem(LOCK_KEY, String(Date.now()));
+  } catch {
+    /* no storage: rely on the "running" check above */
+  }
+
+  try {
+    const catalog = await loadCatalog(signal);
+    const result = await createBackup({
+      catalog,
+      tables: catalog.tables.map((t) => t.name),
+      buckets: catalog.buckets.map((b) => b.id),
+      toCloud: true,
+      zip: null,
+      label: "גיבוי אוטומטי",
+      kind: "auto",
+      signal,
+      onProgress,
+    });
+    await applyRetention(settings);
+    return result;
+  } finally {
+    try {
+      localStorage.removeItem(LOCK_KEY);
+    } catch {
+      /* ignore */
+    }
   }
 }
