@@ -18,6 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { createHash } from 'crypto';
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/admin-credentials.mjs';
 
 // ── Config ──────────────────────────────────────────────
 const SUPABASE_URL = 'https://jaotdqumpcfhcbkgtfib.supabase.co';
@@ -169,8 +170,8 @@ async function main() {
   // 1. Authenticate
   console.log('🔐 מתחבר...');
   const { error: authErr } = await sb.auth.signInWithPassword({
-    email: 'jj1212t@gmail.com',
-    password: '543211',
+    email: ADMIN_EMAIL,
+    password: ADMIN_PASSWORD,
   });
   if (authErr) {
     console.error('❌ Auth failed:', authErr.message);

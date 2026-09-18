@@ -52,3 +52,6 @@ test-url.txt
 # Supabase temp
 supabase/.temp/
 .vercel
+
+# Local admin credentials for scripts/ (never commit)
+.env.migrations.local

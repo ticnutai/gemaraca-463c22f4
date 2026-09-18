@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { createClient } from '@supabase/supabase-js';
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/admin-credentials.mjs';
 
 const SUPABASE_URL = 'https://jaotdqumpcfhcbkgtfib.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imphb3RkcXVtcGNmaGNia2d0ZmliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNDE0MTAsImV4cCI6MjA3NDgxNzQxMH0.t7kmGMKJvcjudbKxUPgQkqmycrCUPTvv5x4Q7byQcK0';
@@ -9,8 +10,8 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 async function main() {
   // Login
   const { error: authErr } = await sb.auth.signInWithPassword({
-    email: 'jj1212t@gmail.com',
-    password: '543211',
+    email: ADMIN_EMAIL,
+    password: ADMIN_PASSWORD,
   });
   if (authErr) {
     console.log('Auth failed:', authErr.message);

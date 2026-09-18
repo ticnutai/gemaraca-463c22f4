@@ -10,7 +10,7 @@ async function main() {
   // Login
   const { error: authErr } = await sb.auth.signInWithPassword({
     email: 'jj1212t@gmail.com',
-    password: '543211',
+    password: 'REDACTED-see-.env.migrations.local',
   });
   if (authErr) {
     console.log('Auth failed:', authErr.message);

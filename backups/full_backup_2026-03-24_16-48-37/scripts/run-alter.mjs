@@ -19,7 +19,7 @@ const sqls = [
 
 async function main() {
   const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-    email: 'jj1212t@gmail.com', password: '543211',
+    email: 'jj1212t@gmail.com', password: 'REDACTED-see-.env.migrations.local',
   });
   if (authErr) { console.error('Auth failed:', authErr.message); return; }
   console.log('Logged in as admin\n');

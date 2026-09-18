@@ -1,7 +1,11 @@
 import { test, expect } from "@playwright/test";
+import fs from "fs";
 
-const EMAIL = "jj1212t@gmail.com";
-const PASSWORD = "543211";
+// Admin login comes from .env.migrations.local (gitignored), never from the repo.
+const localEnv = fs.existsSync(".env.migrations.local") ? fs.readFileSync(".env.migrations.local", "utf8") : "";
+const readVar = (k: string) => process.env[k] ?? localEnv.match(new RegExp(`^${k}=(.*), "m"))?.[1]?.trim() ?? "";
+const EMAIL = readVar("MIGRATION_ADMIN_EMAIL");
+const PASSWORD = readVar("MIGRATION_ADMIN_PASSWORD");
 
 test("logged-in user sees Berakhot daf in EmbedPDF tab with toolbar", async ({ page }, testInfo) => {
   const consoleLogs: string[] = [];

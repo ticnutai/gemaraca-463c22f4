@@ -22,7 +22,7 @@ const SUPABASE_URL = 'https://jaotdqumpcfhcbkgtfib.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imphb3RkcXVtcGNmaGNia2d0ZmliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNDE0MTAsImV4cCI6MjA3NDgxNzQxMH0.t7kmGMKJvcjudbKxUPgQkqmycrCUPTvv5x4Q7byQcK0';
 
 const ADMIN_EMAIL = 'jj1212t@gmail.com';
-const ADMIN_PASSWORD = '543211';
+const ADMIN_PASSWORD = 'REDACTED-see-.env.migrations.local';
 
 // ─── Helpers ─────────────────────────────────────────────────
 function printBanner() {
