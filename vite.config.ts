@@ -110,8 +110,28 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // index.html is NOT precached: a precached copy fetched in the minutes
+        // right after a publish can be the previous build's HTML, and returning
+        // visitors then stay on the old version until the next publish.
+        // Pages are fetched network-first instead; the cache is only the
+        // offline fallback.
+        globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
+        navigateFallback: null,
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages-cache',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 20 },
+            },
+          },
+          {
+            // Backup history must always be live (listed right after a backup runs)
+            urlPattern: /^https:\/\/jaotdqumpcfhcbkgtfib\.supabase\.co\/rest\/v1\/(data_backups|data_restores|user_roles)\b.*/i,
+            handler: 'NetworkOnly',
+          },
           {
             // Cache Supabase API responses — show cached, refresh in background
             urlPattern: /^https:\/\/jaotdqumpcfhcbkgtfib\.supabase\.co\/rest\/v1\/.*/i,
