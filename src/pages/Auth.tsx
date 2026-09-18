@@ -205,6 +205,25 @@ export default function Auth() {
     toast.success("קישור לאיפוס סיסמה נשלח לאימייל שלך");
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+
+    if (result.error) {
+      setIsLoading(false);
+      toast.error("ההתחברות עם גוגל נכשלה — נסה שוב");
+      return;
+    }
+
+    if (result.redirected) return;
+
+    setIsLoading(false);
+    toast.success("התחברת בהצלחה!");
+    navigate("/");
+  };
+
   const switchMode = (newMode: AuthMode) => {
     setMode(newMode);
     setShowPassword(false);
