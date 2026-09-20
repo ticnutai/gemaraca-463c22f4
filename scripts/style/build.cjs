@@ -609,7 +609,11 @@ function buildStyledHtml(rawText, meta = {}) {
   if (meta.caseNumber) parsed.caseNumber = meta.caseNumber;
   if (meta.summary && !parsed.summary) parsed.summary = meta.summary;
   if (meta.sourceUrl && !meta.sourceUrl.includes("/storage/v1/object/")) parsed.sourceUrl = meta.sourceUrl;
-  return generatePsakDinHtml(parsed);
+  const html = generatePsakDinHtml(parsed);
+  return html.replace(
+    ".paragraph {",
+    ".details-table a, .psakim-link a { word-break: break-all; }\n        .paragraph {"
+  );
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

@@ -21,5 +21,10 @@ export function buildStyledHtml(rawText: string, meta: Meta = {}): string {
   if (meta.summary && !parsed.summary) parsed.summary = meta.summary;
   // קישור לקובץ באחסון הפנימי ארוך מאוד וגולש מהמסגרת, והמסמך ממילא מוצג כאן
   if (meta.sourceUrl && !meta.sourceUrl.includes('/storage/v1/object/')) parsed.sourceUrl = meta.sourceUrl;
-  return generatePsakDinHtml(parsed);
+  const html = generatePsakDinHtml(parsed);
+  // כתובת מקור ארוכה גולשת מהמסגרת ויוצרת גלילה לרוחב; שבירת שורה בלבד, בלי שינוי בעיצוב
+  return html.replace(
+    '.paragraph {',
+    '.details-table a, .psakim-link a { word-break: break-all; }\n        .paragraph {',
+  );
 }

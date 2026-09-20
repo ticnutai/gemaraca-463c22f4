@@ -36,6 +36,7 @@ const num = (f, d) => { const i = args.indexOf(f); return i >= 0 ? Number(args[i
 const LIMIT = num('--limit', Infinity);
 const PREVIEW = has('--preview');
 const REVERT = has('--revert');
+const RESTYLE = has('--restyle');   // גם פסקים שכבר עוצבו על ידי הסקריפט הזה
 
 const env = Object.fromEntries(
   readFileSync(join(ROOT, '.env'), 'utf8').split(/\r?\n/)
@@ -69,10 +70,10 @@ const candidates = [];
 for (let from = 0; ; from += 1000) {
   const { data, error } = await sb
     .from('psakei_din')
-    .select('id,title,court,year,case_number,summary,source_url,beautify_count')
+    .select('id,title,court,year,case_number,summary,source_url,beautify_count,original_text')
     .range(from, from + 999);
   if (error) { console.error('❌', error.message); process.exit(1); }
-  candidates.push(...data.filter((p) => !p.beautify_count));
+  candidates.push(...data.filter((p) => !p.beautify_count || (RESTYLE && p.original_text)));
   if (data.length < 1000) break;
 }
 
