@@ -2338,11 +2338,8 @@ export default function EmbedPdfViewerPage() {
             variant="ghost"
             className="h-8 w-8 text-[#0B1F5B] hover:bg-[#D4AF37]/10"
             onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate('/');
-              }
+              setActiveTab("psak-din");
+              navigate('/');
             }}
             title="חזור"
           >
