@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import type { TalmudReference, ValidationStatus } from '@/components/talmud-index/types';
+import { extractReferencesFromText, saveReferences } from '@/lib/references/extractAll';
 
 
 
@@ -64,45 +65,10 @@ export function useExtractReferences() {
 
   return useMutation({
     mutationFn: async ({ text, psakDinId, useAI }: { text: string; psakDinId: string; useAI: boolean }) => {
-      const { data, error: fnError } = await supabase.functions.invoke('extract-references', {
-        body: { text, documentId: psakDinId, useAI },
-      });
-
-      if (fnError) {
-        throw new Error(fnError.message ?? `שגיאה בקריאה ל-Edge Function`);
-      }
-
-      const references = data?.references;
-
-      if (!references?.length) {
-        return { count: 0 };
-      }
-
-      // Delete existing refs for this psak din
-      await supabase
-        .from('talmud_references')
-        .delete()
-        .eq('psak_din_id', psakDinId);
-
-      const rows = references.map((ref: Record<string, unknown>) => ({
-        psak_din_id: psakDinId,
-        tractate: ref.tractate,
-        daf: ref.daf,
-        amud: ref.amud,
-        raw_reference: ref.raw,
-        normalized: ref.normalized,
-        confidence: ref.confidence,
-        confidence_score: ref.confidence_score ?? null,
-        confidence_factors: ref.confidence_factors ?? null,
-        source: ref.source,
-        context_snippet: ref.context_snippet || null,
-        user_id: user?.id || null,
-      }));
-
-      const { error } = await supabase.from('talmud_references').insert(rows);
-      if (error) throw error;
-
-      return { count: references.length };
+      const references = await extractReferencesFromText(text, psakDinId, useAI);
+      if (!references.length) return { count: 0 };
+      const saved = await saveReferences(psakDinId, references, user?.id ?? null);
+      return { count: saved };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['talmud_references'] });
@@ -122,42 +88,12 @@ export function useBatchExtractReferences() {
 
       for (const psak of psakim) {
         if (!psak.text) continue;
-
         try {
-          const { data, error: fnError } = await supabase.functions.invoke('extract-references', {
-            body: { text: psak.text, documentId: psak.id, useAI },
-          });
-
-          if (fnError) continue;
-
-          const references = data?.references;
-          if (!references?.length) continue;
-
-          // Delete existing refs
-          await supabase
-            .from('talmud_references')
-            .delete()
-            .eq('psak_din_id', psak.id);
-
-          const rows = references.map((ref: Record<string, unknown>) => ({
-            psak_din_id: psak.id,
-            tractate: ref.tractate,
-            daf: ref.daf,
-            amud: ref.amud,
-            raw_reference: ref.raw,
-            normalized: ref.normalized,
-            confidence: ref.confidence,
-            confidence_score: ref.confidence_score ?? null,
-            confidence_factors: ref.confidence_factors ?? null,
-            source: ref.source,
-            context_snippet: ref.context_snippet || null,
-            user_id: user?.id || null,
-          }));
-
-          await supabase.from('talmud_references').insert(rows);
-          totalCount += references.length;
+          const references = await extractReferencesFromText(psak.text, psak.id, useAI);
+          if (!references.length) continue;
+          totalCount += await saveReferences(psak.id, references, user?.id ?? null);
         } catch {
-          // Continue with next psak on error
+          // ממשיכים לפסק הבא
         }
       }
 

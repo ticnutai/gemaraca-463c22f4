@@ -55,3 +55,8 @@ supabase/.temp/
 
 # Local admin credentials for scripts/ (never commit)
 .env.migrations.local
+
+# Downloaded corpora and run state (large, regenerable)
+scripts/data/govil/
+scripts/data/govil_index.json
+scripts/data/reanalyze-state.json
