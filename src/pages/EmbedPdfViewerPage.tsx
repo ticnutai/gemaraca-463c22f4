@@ -564,6 +564,7 @@ function downloadBlob(content: string, filename: string, mime: string) {
 export default function EmbedPdfViewerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { setActiveTab } = useAppContext();
   const embeddedMode = searchParams.get("embedded") === "1";
   const externalBookIdParam = searchParams.get("bookId");
   const viewerStateKeyParam = searchParams.get("viewerStateKey");
