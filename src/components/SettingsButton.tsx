@@ -7,6 +7,7 @@ const DevMigrationsPanel = lazy(() => import("@/components/DevMigrationsPanel"))
 const DevConsoleMonitor = lazy(() => import("@/components/DevConsoleMonitor"));
 const DevPerformanceMonitor = lazy(() => import("@/components/DevPerformanceMonitor"));
 const DataBackupPanel = lazy(() => import("@/components/backup/DataBackupPanel"));
+const PsakSourcesPanel = lazy(() => import("@/components/sources/PsakSourcesPanel"));
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 const AutoBackupRunner = lazy(() => import("@/components/backup/AutoBackupRunner"));
 import {
@@ -40,6 +41,7 @@ export function SettingsButton() {
   const [showDevTab, setShowDevTab] = useState(false);
   const [localColors, setLocalColors] = useState<CustomColors>(customColors);
   const [showBackupPanel, setShowBackupPanel] = useState(false);
+  const [showSourcesPanel, setShowSourcesPanel] = useState(false);
   const isAdmin = useIsAdmin() === true;
   
   // Dev tools toggles — persisted in localStorage
@@ -118,6 +120,7 @@ export function SettingsButton() {
 
       <Suspense fallback={null}>
         {showBackupPanel && <DataBackupPanel open={showBackupPanel} onOpenChange={setShowBackupPanel} />}
+        {showSourcesPanel && <PsakSourcesPanel open={showSourcesPanel} onOpenChange={setShowSourcesPanel} />}
         {isAdmin && <AutoBackupRunner />}
       </Suspense>
 
@@ -196,6 +199,17 @@ export function SettingsButton() {
               {/* Data backup & restore — admins only */}
               {isAdmin && (
                 <div className="mt-3 pt-2 border-t border-border">
+                  <button
+                    onClick={() => setShowSourcesPanel(true)}
+                    className="w-full flex items-center gap-3 p-2 rounded-lg transition-all hover:bg-muted/50"
+                  >
+                    <Library className="w-4 h-4 text-blue-600" />
+                    <div className="flex-1 text-right">
+                      <div className="font-medium text-sm">מקורות פסקי הדין</div>
+                      <div className="text-xs text-muted-foreground">בחירה אילו מקורות יוצגו</div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground rotate-180" />
+                  </button>
                   <button
                     onClick={() => setShowBackupPanel(true)}
                     className="w-full flex items-center gap-3 p-2 rounded-lg transition-all hover:bg-muted/50"

@@ -11,9 +11,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { usePsakSources, enabledSourceKeys } from "@/hooks/usePsakSources";
 import {
   Calendar, Building2, FileText, List, BookOpen, Sparkles, Brain, Loader2,
   Link, Plus, Pencil, Trash2, Download, Search, Filter, ArrowUpDown, FileSpreadsheet,
+  Library,
   Paintbrush, FolderOpen,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,6 +66,8 @@ const PsakDinTab = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [courtFilter, setCourtFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const { data: psakSources } = usePsakSources();
   const [fileTypeFilter, setFileTypeFilter] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<string>("year-desc");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -93,7 +97,7 @@ const PsakDinTab = () => {
   useEffect(() => {
     setPsakim([]);
     setHasMore(true);
-  }, [courtFilter, fileTypeFilter, sortOrder, categoryFilter]);
+  }, [courtFilter, fileTypeFilter, sortOrder, categoryFilter, sourceFilter]);
 
   // Load courts for filter
   useEffect(() => {
@@ -125,7 +129,7 @@ const PsakDinTab = () => {
       loadPsakim(0, true);
     }
     loadTotalUnlinkedCount();
-  }, [debouncedSearch, courtFilter, fileTypeFilter, sortOrder, categoryFilter]);
+  }, [debouncedSearch, courtFilter, fileTypeFilter, sortOrder, categoryFilter, sourceFilter, psakSources]);
 
   // Restore scroll position after returning from psak viewer
   useEffect(() => {
@@ -214,6 +218,13 @@ const PsakDinTab = () => {
       }
       if (courtFilter !== 'all') {
         query = query.eq('court', courtFilter);
+      }
+      // מקור הפסק: בחירה מפורשת, ואחרת רק המקורות שמסומנים להצגה במרשם
+      if (sourceFilter !== 'all') {
+        query = query.eq('source_key' as never, sourceFilter);
+      } else {
+        const allowed = enabledSourceKeys(psakSources);
+        if (allowed) query = query.in('source_key' as never, allowed);
       }
       if (categoryFilter !== 'all') {
         if (categoryFilter === '__none__') {
@@ -600,6 +611,20 @@ const PsakDinTab = () => {
                       <SelectItem value="all">כל בתי הדין</SelectItem>
                       {courts.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                    <SelectTrigger className="w-[190px]">
+                      <Library className="w-4 h-4 ml-2" />
+                      <SelectValue placeholder="מקור" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">כל המקורות</SelectItem>
+                      {(psakSources ?? []).filter(s => (s.count ?? 0) > 0).map((s) => (
+                        <SelectItem key={s.key} value={s.key}>
+                          {s.label} ({s.count?.toLocaleString('he-IL')})
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
