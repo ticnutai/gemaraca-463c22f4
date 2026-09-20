@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import PsakDinViewDialog from "@/components/PsakDinViewDialog";
 import { TEMPLATES, generateFromTemplate } from "@/lib/psakDinTemplates";
 import { parsePsakDinText } from "@/lib/psakDinParser";
+import { toHouseStyledHtml, type PsakMeta } from "@/lib/psakDinHtmlTemplate";
 import { PDFViewer as EmbedPDFViewer, type PDFViewerConfig } from "@embedpdf/react-pdf-viewer";
 
 
@@ -381,6 +382,20 @@ function loadPsakFormat(psakId: string): TextFormat | null {
     if (stored) return { ...HARDCODED_DEFAULT, ...JSON.parse(stored) };
   } catch { /* ignore */ }
   return null;
+}
+
+/** The stored ruling's own fields, as the house template expects them. */
+function psakMeta(psak: {
+  title?: string; court?: string; case_number?: string; year?: number; summary?: string; source_url?: string;
+}): PsakMeta {
+  return {
+    title: psak.title,
+    court: psak.court,
+    year: psak.year,
+    caseNumber: psak.case_number,
+    summary: psak.summary,
+    sourceUrl: psak.source_url,
+  };
 }
 
 function loadPsakFavorites(): Set<string> {
@@ -1211,7 +1226,11 @@ export default function EmbedPdfViewerPage() {
   }, []);
 
   const rawLeftContentType = detectContentType(leftSourceUrl);
-  const leftContentType = (!leftSourceUrl && psakData?.full_text) ? 'html-embed' as ContentViewType : rawLeftContentType;
+  // A source URL that is a plain web page (gov.il, psakim.org …) cannot be framed —
+  // those sites send X-Frame-Options, so the iframe stays blank. When we hold the
+  // ruling's own text in the database, show that instead of the external page.
+  const useInternalText = !!psakData?.full_text && (!leftSourceUrl || rawLeftContentType === 'html-page');
+  const leftContentType = useInternalText ? 'html-embed' as ContentViewType : rawLeftContentType;
   const rightContentType = detectContentType(rightSourceUrl);
   const leftViewerUrl = getViewerUrl(leftSourceUrl, leftContentType);
   const rightViewerUrl = getViewerUrl(rightSourceUrl, rightContentType);
@@ -1304,7 +1323,7 @@ export default function EmbedPdfViewerPage() {
     setDocSearchSection('');
     htmlSearchHitsRef.current = [];
     htmlSearchIndexRef.current = -1;
-  }, [leftSourceUrl]);
+  }, [leftSourceUrl, psakData?.id]);
 
   // ── Download in multiple formats ──
   const getCurrentContent = useCallback((): { html: string; text: string; title: string } => {
@@ -1450,7 +1469,7 @@ export default function EmbedPdfViewerPage() {
 
   // Fetch HTML content for beautified .html files and render via srcDoc
   useEffect(() => {
-    if (leftContentType !== 'html-embed' || !leftSourceUrl) return;
+    if (useInternalText || leftContentType !== 'html-embed' || !leftSourceUrl) return;
     let cancelled = false;
     setFetchingHtml(true);
     setFetchHtmlError(null);
@@ -1468,18 +1487,25 @@ export default function EmbedPdfViewerPage() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setFetchHtmlError(err.message);
+        // The remote file is often unreachable from the browser (CORS, a site that
+        // has since moved the document). Fall back to our own copy of the ruling.
+        if (psakData?.full_text) {
+          setFetchedHtml(toHouseStyledHtml(psakData.full_text, psakMeta(psakData)));
+        } else {
+          setFetchHtmlError(err.message);
+        }
         setFetchingHtml(false);
       });
 
     return () => { cancelled = true; };
-  }, [leftSourceUrl, leftContentType]);
+  }, [leftSourceUrl, leftContentType, useInternalText, psakData]);
 
-  // Auto-populate fetchedHtml from psakData.full_text when no source URL
+  // Show the ruling we hold ourselves: already-styled rulings render as they are,
+  // plain imported text gets the house template so it looks like the rest of them.
   useEffect(() => {
-    if (leftSourceUrl || !psakData?.full_text || fetchedHtml) return;
-    setFetchedHtml(psakData.full_text);
-  }, [leftSourceUrl, psakData?.full_text, fetchedHtml]);
+    if (!useInternalText || !psakData?.full_text || fetchedHtml) return;
+    setFetchedHtml(toHouseStyledHtml(psakData.full_text, psakMeta(psakData)));
+  }, [useInternalText, psakData, fetchedHtml]);
 
   // ── Save HTML Embed Handlers ──
   const handleSaveHtmlEmbed = useCallback(async () => {
@@ -1495,7 +1521,13 @@ export default function EmbedPdfViewerPage() {
       const { data: urlData } = supabase.storage.from("psakei-din-files").getPublicUrl(fileName);
       // 2. Save to psakei_din DB if psakData exists
       if (psakData?.id) {
-        const { error } = await supabase.from("psakei_din").update({ full_text: currentHtml, source_url: urlData?.publicUrl || undefined }).eq("id", psakData.id);
+        // A ruling shown from our own copy keeps its origin link: the edited document
+        // lives in full_text, so overwriting source_url would only drop the reference
+        // to the court's site.
+        const { error } = await supabase.from("psakei_din").update({
+          full_text: currentHtml,
+          ...(useInternalText && leftSourceUrl ? {} : { source_url: urlData?.publicUrl || undefined }),
+        }).eq("id", psakData.id);
         if (error) throw error;
       }
       // 3. Save to user_books DB if selectedPdf exists
@@ -1508,7 +1540,7 @@ export default function EmbedPdfViewerPage() {
     } finally {
       setIsSavingHtmlEmbed(false);
     }
-  }, [psakData, fetchedHtml, canPersist, selectedPdf?.id, updateBookEditedText]);
+  }, [psakData, fetchedHtml, canPersist, selectedPdf?.id, updateBookEditedText, useInternalText, leftSourceUrl]);
 
   const handleCopyAndSaveHtmlEmbed = useCallback(async () => {
     setIsSavingHtmlEmbed(true);

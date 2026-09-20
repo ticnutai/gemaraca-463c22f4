@@ -599,10 +599,12 @@ function generatePsakDinHtml(data) {
 </body>
 </html>`;
 }
-
-// scripts/style/entry.ts
-function buildStyledHtml(rawText, meta = {}) {
-  const parsed = parsePsakDinText(rawText);
+function isStyledDocument(text) {
+  return /<!doctype html|<html[\s>]/i.test(text) || text.includes('class="container"');
+}
+function toHouseStyledHtml(text, meta = {}) {
+  if (!text.trim() || isStyledDocument(text)) return text;
+  const parsed = parsePsakDinText(text);
   if (meta.title) parsed.title = meta.title;
   if (meta.court) parsed.court = meta.court || parsed.court;
   if (meta.year) parsed.year = meta.year;
@@ -614,6 +616,11 @@ function buildStyledHtml(rawText, meta = {}) {
     ".paragraph {",
     ".details-table a, .psakim-link a { word-break: break-all; }\n        .paragraph {"
   );
+}
+
+// scripts/style/entry.ts
+function buildStyledHtml(rawText, meta = {}) {
+  return toHouseStyledHtml(rawText, meta);
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
