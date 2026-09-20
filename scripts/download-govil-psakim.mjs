@@ -22,6 +22,7 @@ import { execFileSync } from 'child_process';
 import { tmpdir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createHash } from 'crypto';
 import { BlobReader, ZipReader, TextWriter, configure } from '@zip.js/zip.js';
 import { createClient } from '@supabase/supabase-js';
 import { ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/admin-credentials.mjs';
@@ -190,6 +191,13 @@ async function fetchDocs() {
 // ── שלב 3: ייבוא למסד ───────────────────────────────────────
 const hebrewYear = (iso) => (iso ? new Date(iso).getFullYear() : null);
 
+/** טביעת אצבע של התוכן: רק אותיות וספרות מ-2,000 התווים הראשונים */
+function fingerprint(text) {
+  const core = String(text || '').replace(/<[^>]+>/g, ' ').replace(/[^א-ת0-9]/g, '').slice(0, 2000);
+  if (core.length < 200) return null;
+  return createHash('md5').update(core).digest('hex');
+}
+
 async function importToDb() {
   const env = Object.fromEntries(
     readFileSync(join(ROOT, '.env'), 'utf8').split(/\r?\n/)
@@ -199,35 +207,46 @@ async function importToDb() {
   const { error: authErr } = await sb.auth.signInWithPassword({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
   if (authErr) { console.error('❌ התחברות נכשלה:', authErr.message); process.exit(1); }
 
-  const existing = new Set();
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await sb.from('psakei_din').select('title').range(from, from + 999);
+  // כפילות נבדקת גם לפי כותרת וגם לפי טביעת אצבע של התוכן עצמו,
+  // כי אותו פסק הועלה בעבר ידנית עם כותרת שונה במקצת.
+  const existingTitles = new Set();
+  const existingPrints = new Set();
+  for (let from = 0; ; from += 500) {
+    const { data, error } = await sb.from('psakei_din').select('title,content_print').range(from, from + 499);
     if (error) throw new Error(error.message);
-    data.forEach((p) => existing.add((p.title || '').replace(/\s+/g, ' ').trim()));
-    if (data.length < 1000) break;
+    data.forEach((p) => {
+      existingTitles.add((p.title || '').replace(/\s+/g, ' ').trim());
+      if (p.content_print) existingPrints.add(p.content_print);
+    });
+    if (data.length < 500) break;
   }
+  console.log(`במסד: ${existingTitles.size} כותרות, ${existingPrints.size} טביעות אצבע`);
 
   const files = readdirSync(CACHE).filter((f) => f.endsWith('.json'));
   const rows = [];
+  let duplicates = 0;
   for (const f of files) {
     const item = JSON.parse(readFileSync(join(CACHE, f), 'utf8'));
     const title = (item.title || '').replace(/\s+/g, ' ').trim();
-    if (!title || existing.has(title)) continue;
-    existing.add(title);
+    const print = fingerprint(item.text);
+    if (!title || existingTitles.has(title) || (print && existingPrints.has(print))) { duplicates++; continue; }
+    existingTitles.add(title);
+    if (print) existingPrints.add(print);
     rows.push({
       title,
       court: item.dayan ? 'בתי הדין הרבניים' : 'בתי הדין הרבניים',
       case_number: item.caseNumber || null,
-      year: hebrewYear(item.date),
-      summary: item.summary,
+      year: hebrewYear(item.date) ?? new Date().getFullYear(),
+      summary: item.summary || item.text.slice(0, 500),   // העמודה אינה מאפשרת ריק
       full_text: item.text,
       source_url: `${COLLECTION}?DCRI_UrlName=${item.urlName}`,
+      content_print: print,
       tags: [ORIGIN_TAG, 'בתי הדין הרבניים', ...(item.sourcesSection ? ['רשימת מקורות'] : [])],
     });
     if (rows.length >= LIMIT) break;
   }
 
-  console.log(`פסקים חדשים לייבוא: ${rows.length} (מתוך ${files.length} שהורדו)`);
+  console.log(`פסקים חדשים לייבוא: ${rows.length} | כפילויות שדולגו: ${duplicates} | סה"כ הורדו: ${files.length}`);
   if (DRY) { console.log('(--dry-run: לא נכתב כלום)'); return; }
 
   for (let i = 0; i < rows.length; i += 25) {

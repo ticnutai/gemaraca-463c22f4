@@ -52,7 +52,11 @@ const { error: authErr } = await sb.auth.signInWithPassword({ email: ADMIN_EMAIL
 if (authErr) { console.error('❌ התחברות נכשלה:', authErr.message); process.exit(1); }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const stripHtml = (s) => s.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
+const stripHtml = (s) => s
+  .replace(/<style[\s\S]*?<\/style>/gi, ' ')   // קוד העיצוב אינו חלק מהפסק
+  .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+  .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/g, ' ')
+  .replace(/\s+/g, ' ').trim();
 
 function chunks(text) {
   if (text.length <= CHUNK) return [text];
@@ -85,9 +89,10 @@ async function loadTargets() {
 
 // ── ניתוח פסק אחד ───────────────────────────────────────────
 async function analyze(psak) {
-  const { data: full, error: loadErr } = await sb.from('psakei_din').select('full_text').eq('id', psak.id).single();
+  const { data: full, error: loadErr } = await sb.from('psakei_din').select('full_text,original_text').eq('id', psak.id).single();
   if (loadErr) throw new Error(loadErr.message);
-  const text = stripHtml(full?.full_text ?? '');
+  // original_text הוא הטקסט לפני העיצוב, ולכן נקי מ-CSS
+  const text = stripHtml(full?.original_text || full?.full_text || '');
   if (text.length < 400) return { added: 0, found: 0, skipped: true };
   const parts = chunks(text);
   const byKey = new Map();

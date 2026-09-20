@@ -27,7 +27,15 @@ export interface ExtractedReference {
 }
 
 export const stripHtml = (s: string) =>
-  s.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim();
+  s
+    // תוכן style/script אינו חלק מהפסק ואסור שייכנס לניתוח
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&[a-z]+;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 export function chunkText(text: string): string[] {
   if (text.length <= CHUNK) return [text];

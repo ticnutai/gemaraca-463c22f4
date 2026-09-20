@@ -60,3 +60,5 @@ supabase/.temp/
 scripts/data/govil/
 scripts/data/govil_index.json
 scripts/data/reanalyze-state.json
+scripts/data/style-preview/
+scripts/data/_query.sql
