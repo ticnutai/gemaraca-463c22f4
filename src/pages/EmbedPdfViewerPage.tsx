@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useAppContext } from "@/contexts/AppContext";
 import {
   FileText, Bookmark, Download, Search, Trash2, Plus, ExternalLink, BookOpen,
   Palette, Maximize2, Minimize2, RefreshCw, Bold, Italic, Underline, AlignRight,
@@ -563,6 +564,7 @@ function downloadBlob(content: string, filename: string, mime: string) {
 export default function EmbedPdfViewerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { setActiveTab } = useAppContext();
   const embeddedMode = searchParams.get("embedded") === "1";
   const externalBookIdParam = searchParams.get("bookId");
   const viewerStateKeyParam = searchParams.get("viewerStateKey");
@@ -2336,11 +2338,8 @@ export default function EmbedPdfViewerPage() {
             variant="ghost"
             className="h-8 w-8 text-[#0B1F5B] hover:bg-[#D4AF37]/10"
             onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate('/');
-              }
+              setActiveTab("psak-din");
+              navigate('/');
             }}
             title="חזור"
           >
