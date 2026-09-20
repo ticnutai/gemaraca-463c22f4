@@ -63,8 +63,8 @@ async function fetchTag(leaf) {
   }
 }
 
-const BATCH_SIZE = isRetry ? 5 : 10;
-const DELAY = isRetry ? 300 : 100;
+const BATCH_SIZE = isRetry ? 5 : 5;   // קצב עדין לאתר המקור
+const DELAY = isRetry ? 400 : 400;
 for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
   const batch = toFetch.slice(i, i + BATCH_SIZE);
   await Promise.all(batch.map(fetchTag));
