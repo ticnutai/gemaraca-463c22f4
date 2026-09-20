@@ -209,6 +209,20 @@ export function generatePsakDinHtml(data: ParsedPsakDin): string {
             body { background: white; padding: 0; }
             .container { box-shadow: none; border: none; padding: 20px; }
         }
+        /* טלפון: המסגרת נצמדת לרוחב המסך, טבלת הפרטים נערמת שורה מתחת לשורה */
+        @media (max-width: 640px) {
+            body { padding: 8px; }
+            .container { margin: 8px auto; padding: 20px 14px; border-radius: 6px; }
+            .header { margin-bottom: 24px; }
+            .header h1 { font-size: 2em; }
+            .section-title { font-size: 1.35em; margin-top: 24px; }
+            .subsection-title { font-size: 1.15em; }
+            .details-table td { display: block; width: auto; padding: 4px 0; }
+            .details-table td:first-child { width: auto; border-bottom: none; padding-top: 12px; }
+            .details-table tr:last-child td:last-child { border-bottom: none; }
+            .details-table a, .psakim-link a { word-break: break-all; overflow-wrap: anywhere; }
+            .detected-quote { margin: 12px 0; padding: 8px 12px; }
+        }
     </style>
 </head>
 <body>

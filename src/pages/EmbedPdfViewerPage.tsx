@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   FileText, Bookmark, Download, Search, Trash2, Plus, ExternalLink, BookOpen,
   Palette, Maximize2, Minimize2, RefreshCw, Bold, Italic, Underline, AlignRight,
@@ -581,6 +582,7 @@ export default function EmbedPdfViewerPage() {
   const navigate = useNavigate();
   const { setActiveTab } = useAppContext();
   const embeddedMode = searchParams.get("embedded") === "1";
+  const isMobile = useIsMobile();
   const externalBookIdParam = searchParams.get("bookId");
   const viewerStateKeyParam = searchParams.get("viewerStateKey");
   const [selectedPdfId, setSelectedPdfId] = useState<string | null>(() => externalBookIdParam);
@@ -2362,7 +2364,7 @@ export default function EmbedPdfViewerPage() {
       )}
       {/* ── Compact Header ── */}
       <header className={`border-b-2 border-[#D4AF37] bg-white px-3 ${embeddedMode ? 'py-1.5' : 'py-2'} shadow-sm flex-shrink-0`}>
-        <div className="flex items-center gap-2 max-w-[1800px] mx-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 max-w-[1800px] mx-auto min-w-0">
           {/* Back button */}
           {!embeddedMode && (
           <Button
@@ -2397,8 +2399,8 @@ export default function EmbedPdfViewerPage() {
 
           <Separator orientation="vertical" className="h-5 bg-[#D4AF37]/30 hidden sm:block" />
 
-          {/* View mode — icon-only buttons with tooltip */}
-          <div className="flex gap-0.5">
+          {/* View mode — icon-only buttons with tooltip; a phone has room for one pane only */}
+          <div className="hidden sm:flex gap-0.5">
             {([
               { mode: "single" as ViewMode, label: "יחיד", icon: <FileText className="h-3.5 w-3.5" /> },
               { mode: "split" as ViewMode, label: "מפוצל", icon: <Columns className="h-3.5 w-3.5" /> },
@@ -2481,8 +2483,8 @@ export default function EmbedPdfViewerPage() {
             onChange={handleFileUpload}
           />
 
-          {/* Icon toolbar */}
-          <div className="flex items-center gap-0.5 border border-[#D4AF37]/30 rounded-lg px-1 py-0.5 bg-[#D4AF37]/5">
+          {/* Icon toolbar — scrolls sideways on narrow screens instead of clipping */}
+          <div className="flex items-center gap-0.5 border border-[#D4AF37]/30 rounded-lg px-1 py-0.5 bg-[#D4AF37]/5 min-w-0 overflow-x-auto scrollbar-hide shrink">
             {toolbarItems.map((item) => (
               <button
                 key={item.id}
@@ -2532,11 +2534,11 @@ export default function EmbedPdfViewerPage() {
                 </button>
               </>
             )}
-            {/* Pin/unpin sidebar */}
-            <div className="w-px h-4 bg-[#D4AF37]/30" />
+            {/* Pin/unpin sidebar — the panel is an overlay on phones, nothing to pin */}
+            <div className="hidden sm:block w-px h-4 bg-[#D4AF37]/30" />
             <button
               onClick={() => setIconBarPinned(p => !p)}
-              className={`p-1.5 rounded-md transition-all ${
+              className={`hidden sm:block p-1.5 rounded-md transition-all ${
                 iconBarPinned
                   ? "bg-[#0B1F5B] text-white"
                   : "text-[#0B1F5B]/60 hover:bg-[#D4AF37]/15 hover:text-[#0B1F5B]"
@@ -2550,7 +2552,7 @@ export default function EmbedPdfViewerPage() {
           {/* Fullscreen toggle */}
           <button
             onClick={() => setViewerFullscreen(v => !v)}
-            className="p-1.5 rounded-md text-[#0B1F5B]/50 hover:text-[#0B1F5B] hover:bg-[#D4AF37]/10"
+            className="hidden sm:block p-1.5 rounded-md text-[#0B1F5B]/50 hover:text-[#0B1F5B] hover:bg-[#D4AF37]/10"
             title={viewerFullscreen ? "צמצם" : "מסך מלא"}
           >
             {viewerFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -2579,7 +2581,9 @@ export default function EmbedPdfViewerPage() {
       <div className="flex-1 flex min-h-0">
         {/* Panel overlay (slides from right) */}
         {activePanel && (
-          <aside className="w-72 xl:w-80 border-l-2 border-[#D4AF37]/30 bg-white flex-shrink-0 overflow-y-auto">
+          <aside className={isMobile
+            ? "fixed inset-x-0 bottom-0 top-[49px] z-40 bg-white overflow-y-auto shadow-2xl"
+            : "w-72 xl:w-80 border-l-2 border-[#D4AF37]/30 bg-white flex-shrink-0 overflow-y-auto"}>
             <div className="p-3 space-y-3">
               {/* Close */}
               <div className="flex items-center justify-between">
@@ -2590,14 +2594,14 @@ export default function EmbedPdfViewerPage() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className={`h-6 w-6 ${iconBarPinned ? "text-[#0B1F5B] bg-[#D4AF37]/20" : "text-[#0B1F5B]/40"}`}
+                    className={`hidden sm:inline-flex h-6 w-6 ${iconBarPinned ? "text-[#0B1F5B] bg-[#D4AF37]/20" : "text-[#0B1F5B]/40"}`}
                     title={iconBarPinned ? "בטל הצמדת סרגל צד" : "הצמד סרגל צד פתוח"}
                     onClick={() => setIconBarPinned(p => !p)}
                   >
                     {iconBarPinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setActivePanel(null)}>
-                    <Trash2 className="h-3 w-3 text-[#0B1F5B]/40" />
+                  <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-6 sm:w-6" onClick={() => setActivePanel(null)} title="סגור">
+                    <X className="h-3.5 w-3.5 text-[#0B1F5B]/60" />
                   </Button>
                 </div>
               </div>
@@ -3253,7 +3257,7 @@ export default function EmbedPdfViewerPage() {
               {/* ═══ BEAUTIFIED FORMATTING TOOLBAR ═══ */}
               {beautifiedHtml && activePanel === "beautify" && (
                 <div className="border-b-2 border-[#D4AF37]/20 bg-white/80 backdrop-blur-sm flex-shrink-0">
-                  <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                  <div className="px-2 py-1.5 flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
                     <span className="text-[10px] text-[#D4AF37] font-semibold ml-2">עריכת מסמך מעוצב</span>
                     <div className="w-px h-5 bg-[#D4AF37]/20" />
 
@@ -3451,7 +3455,7 @@ export default function EmbedPdfViewerPage() {
               {/* ═══ TEXT FORMATTING TOOLBAR ═══ */}
               {leftContentType === 'text' && fetchedText !== null && !(beautifiedHtml && activePanel === "beautify") && (
                 <div className="border-b-2 border-[#D4AF37]/20 bg-white/80 backdrop-blur-sm flex-shrink-0">
-                  <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                  <div className="px-2 py-1.5 flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
                     {/* Font selector */}
                     <Popover>
                       <PopoverTrigger asChild>
@@ -3613,7 +3617,7 @@ export default function EmbedPdfViewerPage() {
               {/* ═══ HTML-EMBED EDITING TOOLBAR ═══ */}
               {leftContentType === 'html-embed' && fetchedHtml && !(beautifiedHtml && activePanel === "beautify") && (
                 <div className="border-b-2 border-[#D4AF37]/20 bg-white/80 backdrop-blur-sm flex-shrink-0">
-                  <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                  <div className="px-2 py-1.5 flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
                     <span className="text-[10px] text-[#D4AF37] font-semibold ml-2">עריכת מסמך HTML</span>
                     <div className="w-px h-5 bg-[#D4AF37]/20" />
 
@@ -3818,7 +3822,7 @@ export default function EmbedPdfViewerPage() {
               {/* ═══ HTML-PAGE TOOLBAR ═══ */}
               {leftContentType === 'html-page' && !(beautifiedHtml && activePanel === "beautify") && (
                 <div className="border-b-2 border-[#D4AF37]/20 bg-white/80 backdrop-blur-sm flex-shrink-0">
-                  <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                  <div className="px-2 py-1.5 flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
                     <span className="text-[10px] text-[#D4AF37] font-semibold ml-2">צפייה בדף חיצוני</span>
                     <div className="w-px h-5 bg-[#D4AF37]/20" />
                     {/* Template Switcher */}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -209,12 +210,17 @@ export default function AiTutorChat() {
   const fabDragOffset = useRef({ x: 0, y: 0 });
   const fabPosLoadedFromCloud = useRef(false);
 
-  const { geo, onDragStart: onPanelDragStart, onResizeStart } = useFloatingPanel("ai-tutor", {
+  const { geo: storedGeo, onDragStart: onPanelDragStart, onResizeStart } = useFloatingPanel("ai-tutor", {
     x: typeof window !== "undefined" ? window.innerWidth - 420 : 200,
     y: typeof window !== "undefined" ? window.innerHeight - 520 : 100,
     width: 400,
     height: 540,
   });
+  // A phone has no room for a floating window: the chat takes the whole screen.
+  const isMobile = useIsMobile();
+  const geo = isMobile
+    ? { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight }
+    : storedGeo;
 
   // ─── Persist ───
   useEffect(() => { saveConversations(conversations); }, [conversations]);
@@ -581,10 +587,10 @@ export default function AiTutorChat() {
       {/* Chat Panel */}
       {isOpen && (
         <div
-          className="fixed z-[9996] flex flex-col rounded-xl border border-accent/50 bg-background shadow-2xl select-none overflow-hidden"
+          className={`fixed z-[9996] flex flex-col border border-accent/50 bg-background shadow-2xl select-none overflow-hidden ${isMobile ? "rounded-none" : "rounded-xl"}`}
           style={{ left: geo.x, top: geo.y, width: geo.width, height: geo.height }}
         >
-          <ResizeHandles onResizeStart={onResizeStart} />
+          {!isMobile && <ResizeHandles onResizeStart={onResizeStart} />}
 
           {/* Header */}
           <div

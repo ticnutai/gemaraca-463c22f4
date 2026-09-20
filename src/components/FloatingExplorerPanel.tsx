@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   BookOpen, ChevronLeft, Scale, Sparkles, ArrowRight,
   Loader2, Crown, Star, Flame, TrendingUp,
@@ -105,14 +106,20 @@ export default function FloatingExplorerPanel() {
   useEffect(() => { syncFromCloud(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Center panel on first open if position is -1
+  const isMobile = useIsMobile();
   const resolvedLayout = useMemo(() => {
     const l = { ...layout };
+    // On a phone the saved desktop geometry never fits; use the whole width
+    // and leave the bottom strip to the floating buttons.
+    if (isMobile) {
+      return { ...l, x: 0, y: 0, w: window.innerWidth, h: Math.max(320, window.innerHeight - 88) };
+    }
     if (l.x < 0 || l.y < 0) {
       l.x = Math.max(20, (window.innerWidth - l.w) / 2);
       l.y = Math.max(20, (window.innerHeight - l.h) / 2);
     }
     return l;
-  }, [layout]);
+  }, [layout, isMobile]);
 
   // ─── Loaded pages query (from gemara_pages + shas_download_progress) ──
   const { data: loadedPages = {} } = useQuery<Record<string, Set<string>>>({
@@ -475,7 +482,7 @@ export default function FloatingExplorerPanel() {
     <button
       onClick={toggle}
       className={cn(
-        "fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full",
+        "fixed bottom-4 left-4 w-12 h-12 md:bottom-6 md:left-6 md:w-14 md:h-14 z-50 rounded-full",
         "bg-primary text-primary-foreground shadow-lg",
         "flex items-center justify-center",
         "hover:scale-110 transition-transform duration-200",
