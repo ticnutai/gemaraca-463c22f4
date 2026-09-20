@@ -316,6 +316,21 @@ export type Database = {
         }
         Relationships: []
       }
+      masechtot_daf_limits: {
+        Row: {
+          max_daf: number
+          name: string
+        }
+        Insert: {
+          max_daf: number
+          name: string
+        }
+        Update: {
+          max_daf?: number
+          name?: string
+        }
+        Relationships: []
+      }
       migration_history: {
         Row: {
           created_at: string
@@ -565,6 +580,95 @@ export type Database = {
           },
         ]
       }
+      psak_source_registry: {
+        Row: {
+          attribution: string | null
+          created_at: string
+          enabled: boolean
+          key: string
+          label: string
+          license: string | null
+          site_url: string | null
+          sort_order: number
+        }
+        Insert: {
+          attribution?: string | null
+          created_at?: string
+          enabled?: boolean
+          key: string
+          label: string
+          license?: string | null
+          site_url?: string | null
+          sort_order?: number
+        }
+        Update: {
+          attribution?: string | null
+          created_at?: string
+          enabled?: boolean
+          key?: string
+          label?: string
+          license?: string | null
+          site_url?: string | null
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      psak_sources: {
+        Row: {
+          book: string | null
+          confidence: string
+          corpus: string
+          created_at: string
+          display: string
+          id: string
+          psak_din_id: string
+          raw_path: string
+          section: string | null
+          section_group: string | null
+          source: string
+          subsection: string | null
+          validation_status: string
+        }
+        Insert: {
+          book?: string | null
+          confidence?: string
+          corpus: string
+          created_at?: string
+          display: string
+          id?: string
+          psak_din_id: string
+          raw_path: string
+          section?: string | null
+          section_group?: string | null
+          source?: string
+          subsection?: string | null
+          validation_status?: string
+        }
+        Update: {
+          book?: string | null
+          confidence?: string
+          corpus?: string
+          created_at?: string
+          display?: string
+          id?: string
+          psak_din_id?: string
+          raw_path?: string
+          section?: string | null
+          section_group?: string | null
+          source?: string
+          subsection?: string | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psak_sources_psak_din_id_fkey"
+            columns: ["psak_din_id"]
+            isOneToOne: false
+            referencedRelation: "psakei_din"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       psakei_din: {
         Row: {
           beautify_count: number
@@ -572,11 +676,14 @@ export type Database = {
           case_summary: string | null
           category: string | null
           content_hash: string | null
+          content_print: string | null
           court: string
           created_at: string
           full_text: string | null
           id: string
+          original_text: string | null
           search_vector: unknown
+          source_key: string | null
           source_url: string | null
           summary: string
           tags: string[] | null
@@ -590,11 +697,14 @@ export type Database = {
           case_summary?: string | null
           category?: string | null
           content_hash?: string | null
+          content_print?: string | null
           court: string
           created_at?: string
           full_text?: string | null
           id?: string
+          original_text?: string | null
           search_vector?: unknown
+          source_key?: string | null
           source_url?: string | null
           summary: string
           tags?: string[] | null
@@ -608,11 +718,14 @@ export type Database = {
           case_summary?: string | null
           category?: string | null
           content_hash?: string | null
+          content_print?: string | null
           court?: string
           created_at?: string
           full_text?: string | null
           id?: string
+          original_text?: string | null
           search_vector?: unknown
+          source_key?: string | null
           source_url?: string | null
           summary?: string
           tags?: string[] | null
