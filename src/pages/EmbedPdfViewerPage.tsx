@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useAppContext } from "@/contexts/AppContext";
 import {
   FileText, Bookmark, Download, Search, Trash2, Plus, ExternalLink, BookOpen,
   Palette, Maximize2, Minimize2, RefreshCw, Bold, Italic, Underline, AlignRight,
