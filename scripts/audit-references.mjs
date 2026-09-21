@@ -86,8 +86,8 @@ const strip = (s) => String(s || '')
   .replace(/\s+/g, ' ').trim();
 
 const precededByYerushalmi = (before) => {
-  const marks = [...before.matchAll(/ירושלמי|ירוש['׳]|בבלי|גמרא|גמ['׳]/g)];
-  return marks.length ? /ירוש/.test(marks[marks.length - 1][0]) : false;
+  const marks = [...before.matchAll(/ירושלמי|ירוש['׳]|תוספתא|תוספת['׳]|בבלי|גמרא|גמ['׳]/g)];
+  return marks.length ? /ירוש|תוספת/.test(marks[marks.length - 1][0]) : false;
 };
 /** ציטוט שיש בו "דף" או ציון עמוד הוא בבלי, גם אם הוזכר ירושלמי לפניו */
 const citesDaf = (raw) => /דף|עמוד|ע['׳"״][אב]/.test(raw);

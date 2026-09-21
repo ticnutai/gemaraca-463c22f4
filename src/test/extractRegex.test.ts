@@ -102,4 +102,10 @@ describe("regex reference extraction", () => {
     expect(found('ועיין בכתובות (פח ע"ב) ובמה שכתב שם')).toEqual(["כתובות 88b"]);
     expect(found("וכן בכתובות (סג:) שם")).toEqual(["כתובות 63b"]);
   });
+
+  it("does not read a Tosefta or a spelled-out chapter citation as a daf", () => {
+    expect(found('ועוד דבתוספתא מפורש לא כן, דז"ל (בבא קמא פרק ט הלכה יא) האב המכה את בנו')).toEqual([]);
+    expect(found('ומקור דברי המחבר הם במשנה שקלים (פרק ב משנה ה) דתנן מותר עניים')).toEqual([]);
+    expect(found("עי' תוספתא ב\"מ פ\"ח וירושלמי קדושין פ\"ב ה\"א")).toEqual([]);
+  });
 });
