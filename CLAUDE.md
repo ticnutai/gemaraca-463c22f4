@@ -56,6 +56,9 @@ Linux container.
 - Supabase edge functions that should be callable anonymously are listed with `verify_jwt = false`
   in `supabase/config.toml` — add new public functions there.
 - Migrations are append-only: add a new timestamped file, never edit an applied one.
+- **One document viewer.** Rulings open only through `useDocumentViewer().open(psak)`
+  (`src/components/DocumentViewerProvider.tsx`), which shows `EmbedPdfViewerPage` in a dialog or
+  full page. Engine settings live in `src/lib/embedPdfConfig.ts`. Don't add another viewer.
 
 ## Environment
 

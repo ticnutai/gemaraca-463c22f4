@@ -19,8 +19,7 @@ import {
   Database, Tag, Filter, BarChart3, Sparkles, Building2, Calendar,
   List, LayoutGrid, TableIcon, ArrowUpDown
 } from "lucide-react";
-import PsakDinViewDialog from "./PsakDinViewDialog";
-import ViewerPreferenceDialog, { getViewerPreference, setViewerPreference, type ViewerMode } from "./ViewerPreferenceDialog";
+import { useDocumentViewer } from "./DocumentViewerProvider";
 import { getMeta, setMeta } from "@/lib/psakCache";
 
 interface PsakLink {
@@ -81,13 +80,8 @@ const GemaraPsakDinIndex = () => {
   const [expandedMasechet, setExpandedMasechet] = useState<string | null>(null);
   const [selectedDafPsakim, setSelectedDafPsakim] = useState<PsakLink[]>([]);
   const [selectedDafInfo, setSelectedDafInfo] = useState<{ masechet: string; daf: number } | null>(null);
-  const [dialogPsak, setDialogPsak] = useState<PsakLink | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"tree" | "stats" | "table" | "cards">("tree");
   const [psakimView, setPsakimView] = useState<"list" | "table" | "compact">("list");
-  const [prefDialogOpen, setPrefDialogOpen] = useState(false);
-  const [pendingPsak, setPendingPsak] = useState<PsakLink | null>(null);
-  const [preferredViewer, setPreferredViewer] = useState<ViewerMode>(() => getViewerPreference() ?? "embedpdf");
 
   const statistics = useMemo<Statistics>(() => {
     const tagCounts = new Map<string, number>();
@@ -461,47 +455,17 @@ const GemaraPsakDinIndex = () => {
     }
   };
 
-  const openWithMode = useCallback((psak: PsakLink, mode: ViewerMode) => {
-    const sourceUrl = (psak as any)?.source_url || (psak as any)?.sourceUrl || psak?.psakei_din?.source_url;
-    switch (mode) {
-      case "embedpdf":
-        navigate(`/embedpdf-viewer?${sourceUrl ? `url=${encodeURIComponent(sourceUrl)}&` : ''}psakId=${psak.psak_din_id || psak.id}`);
-        break;
-      case "newwindow":
-        if (sourceUrl) {
-          window.open(sourceUrl, "_blank");
-        } else {
-          setDialogPsak(psak);
-          setDialogOpen(true);
-        }
-        break;
-      default:
-        setDialogPsak(psak);
-        setDialogOpen(true);
-    }
-  }, [navigate]);
-
+  const { open: openDocument } = useDocumentViewer();
   const handlePsakClick = useCallback((psak: any) => {
     if (!psak) return;
-    trackRecentPsak(psak.id || psak.psak_din_id || '');
-    // Wrap psakei_din data into PsakLink shape if needed
-    const psakLink: PsakLink = psak.psak_din_id ? psak : {
-      id: psak.id || '',
-      psak_din_id: psak.id || '',
-      sugya_id: '',
-      connection_explanation: '',
-      relevance_score: 0,
-      psakei_din: psak,
-    };
-    const saved = getViewerPreference();
-    openWithMode(psakLink, saved ?? "embedpdf");
-  }, [openWithMode]);
-
-  const toggleViewerPreference = useCallback(() => {
-    const next: ViewerMode = preferredViewer === "dialog" ? "embedpdf" : "dialog";
-    setPreferredViewer(next);
-    setViewerPreference(next);
-  }, [preferredViewer]);
+    const id = psak.psak_din_id || psak.psakei_din?.id || psak.id || '';
+    trackRecentPsak(id);
+    openDocument({
+      id,
+      title: psak.psakei_din?.title || psak.title,
+      source_url: psak.source_url || psak.sourceUrl || psak.psakei_din?.source_url,
+    });
+  }, [openDocument]);
 
   const handleTagClick = useCallback((tag: string) => {
     setSelectedTag(tag === selectedTag ? "all" : tag);
@@ -902,16 +866,6 @@ return (
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-[11px]"
-                    onClick={toggleViewerPreference}
-                    title="החלף ברירת מחדל לצפיין"
-                  >
-                    <ArrowUpDown className="w-3.5 h-3.5 ml-1" />
-                    {preferredViewer === "dialog" ? "רגיל" : "EmbedPDF"}
-                  </Button>
                   <Button variant={psakimView === "list" ? "default" : "ghost"} size="sm" className="h-6 px-2 text-[11px]" onClick={() => setPsakimView("list")} title="רשימה">
                     <List className="w-3.5 h-3.5" />
                   </Button>
@@ -1054,31 +1008,7 @@ return (
         </div>
       )}
 
-      <PsakDinViewDialog
-        psak={dialogPsak ? {
-          id: dialogPsak.psakei_din?.id || dialogPsak.id,
-          title: dialogPsak.psakei_din?.title || '',
-          court: dialogPsak.psakei_din?.court,
-          year: dialogPsak.psakei_din?.year,
-          summary: dialogPsak.psakei_din?.summary || '',
-          tags: dialogPsak.psakei_din?.tags,
-          source_url: dialogPsak.psakei_din?.source_url,
-          connection: dialogPsak.connection_explanation,
-        } : null}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
 
-      <ViewerPreferenceDialog
-        open={prefDialogOpen}
-        onOpenChange={setPrefDialogOpen}
-        onSelect={(mode) => {
-          if (pendingPsak) {
-            openWithMode(pendingPsak, mode);
-            setPendingPsak(null);
-          }
-        }}
-      />
     </div>
   );
 };

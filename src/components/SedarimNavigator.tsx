@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { BookOpen, ChevronLeft, ChevronDown, Scale, Download, Loader2, Check, X, MoreVertical, Trash2, RefreshCw, LayoutGrid, List, Compass, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackRecentPsak } from "@/lib/recentPsakim";
-import { getViewerPreference } from "@/components/ViewerPreferenceDialog";
+import { useDocumentViewer } from "@/components/DocumentViewerProvider";
 import { SEDARIM, getMasechtotBySeder, MASECHTOT, Masechet } from "@/lib/masechtotData";
 import { toDafFormat } from "@/lib/hebrewNumbers";
 import { Button } from "@/components/ui/button";
@@ -230,21 +230,11 @@ const SedarimNavigator = ({ className }: SedarimNavigatorProps) => {
     navigate(`/sugya/${sugyaId}`);
   };
 
+  const { open: openDocument } = useDocumentViewer();
   const handlePsakDinClick = (psak: PsakDinExample) => {
     trackRecentPsak(psak.id);
     queryClient.invalidateQueries({ queryKey: ['recently-viewed-psakim'] });
-    
-    const preferred = getViewerPreference() ?? "embedpdf";
-    if (preferred === "newwindow" && psak.source_url) {
-      window.open(psak.source_url, '_blank');
-      return;
-    }
-    if (preferred === "embedpdf") {
-      navigate(`/embedpdf-viewer?${psak.source_url ? `url=${encodeURIComponent(psak.source_url)}&` : ''}psakId=${psak.id}`);
-      return;
-    }
-    // fallback: go to psak-din tab
-    setActiveTab("psak-din");
+    openDocument({ id: psak.id, title: psak.title, source_url: psak.source_url });
   };
 
   const getMasechetCount = (seder: string) => {

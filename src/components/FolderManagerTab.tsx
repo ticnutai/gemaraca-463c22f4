@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
-import PsakDinViewDialog from "./PsakDinViewDialog";
+import { useDocumentViewer } from "./DocumentViewerProvider";
 
 interface FolderInfo {
   name: string;
@@ -41,6 +41,7 @@ interface PsakMinimal {
 
 const FolderManagerTab = () => {
   const navigate = useNavigate();
+  const { open: openDocument } = useDocumentViewer();
   const [folders, setFolders] = useState<FolderInfo[]>([]);
   const [uncategorizedCount, setUncategorizedCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -49,8 +50,6 @@ const FolderManagerTab = () => {
   const [loadingPsakim, setLoadingPsakim] = useState(false);
 
   // View psak dialog
-  const [viewPsak, setViewPsak] = useState<Database['public']['Tables']['psakei_din']['Row'] | null>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [loadingViewPsak, setLoadingViewPsak] = useState(false);
 
   // Notes dialog
@@ -426,17 +425,17 @@ const FolderManagerTab = () => {
   };
 
   // ─── View Psak ─────────────────────────
+  const reloadExpandedFolder = () => {
+    if (expandedFolder === "__uncategorized__") loadFolderPsakim(null);
+    else if (expandedFolder) loadFolderPsakim(expandedFolder);
+  };
+
   const handleViewPsak = async (psakId: string) => {
     setLoadingViewPsak(true);
     try {
-      const { data, error } = await supabase
-        .from("psakei_din")
-        .select("*")
-        .eq("id", psakId)
-        .single();
+      const { data, error } = await supabase.from("psakei_din").select("id, title, source_url").eq("id", psakId).single();
       if (error) throw error;
-      setViewPsak(data);
-      setViewDialogOpen(true);
+      openDocument({ id: data.id, title: data.title, source_url: data.source_url }, { onSaved: reloadExpandedFolder });
     } catch (err) {
       console.error("Error loading psak:", err);
       toast({ title: "שגיאה בטעינת פסק הדין", variant: "destructive" });
@@ -1349,20 +1348,6 @@ const FolderManagerTab = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ─── View Psak Dialog ─── */}
-      <PsakDinViewDialog
-        psak={viewPsak}
-        open={viewDialogOpen}
-        onOpenChange={setViewDialogOpen}
-        onSave={() => {
-          // Refresh the current folder psakim after a save
-          if (expandedFolder === "__uncategorized__") {
-            loadFolderPsakim(null);
-          } else if (expandedFolder) {
-            loadFolderPsakim(expandedFolder);
-          }
-        }}
-      />
 
       {/* ─── Notes Dialog ─── */}
       <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>

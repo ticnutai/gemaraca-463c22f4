@@ -20,14 +20,13 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import PsakDinViewDialog from "./PsakDinViewDialog";
 import PsakPreviewPopover from "./PsakPreviewPopover";
 import PsakDinEditDialog from "./PsakDinEditDialog";
 import BulkActionsBar from "./BulkActionsBar";
 import FileTypeBadge, { detectFileType } from "./FileTypeBadge";
 import { FileType as LucideFileType } from "lucide-react";
 import GemaraPsakDinIndex from "./GemaraPsakDinIndex";
-import { getViewerPreference, setViewerPreference, type ViewerMode } from "./ViewerPreferenceDialog";
+import { useDocumentViewer } from "./DocumentViewerProvider";
 import { useToast } from "@/hooks/use-toast";
 import { cachePsakim, getAllCachedPsakim, type CachedPsak } from "@/lib/psakCache";
 import { exportPsakimToCsv } from "@/lib/csvExporter";
@@ -318,6 +317,7 @@ const PsakDinTab = () => {
     }
   };
 
+  const { open: openDocument } = useDocumentViewer();
   const handlePsakClick = (psak: PsakDinRow) => {
     // Save scroll position and loaded item count before navigating
     if (scrollContainerRef.current) {
@@ -328,41 +328,7 @@ const PsakDinTab = () => {
     // Track as recently viewed for home page "פסקי דין אחרונים"
     trackRecentPsak(psak.id);
 
-    const sourceUrl = psak.source_url;
-    const preferred = getViewerPreference() ?? "embedpdf";
-
-    if (preferred === "newwindow" && sourceUrl) {
-      window.open(sourceUrl, "_blank");
-      return;
-    }
-
-    if (preferred === "embedpdf") {
-      navigate(`/embedpdf-viewer?${sourceUrl ? `url=${encodeURIComponent(sourceUrl)}&` : ''}psakId=${psak.id}`);
-      return;
-    }
-
-    setSelectedPsak(psak);
-    setDialogOpen(true);
-  };
-
-  const handleSwitchViewer = (psak: PsakDinRow, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Save scroll position and loaded item count before navigating
-    if (scrollContainerRef.current) {
-      sessionStorage.setItem(SCROLL_POS_KEY, String(scrollContainerRef.current.scrollTop));
-      sessionStorage.setItem(SCROLL_COUNT_KEY, String(psakim.length));
-    }
-    const current = getViewerPreference() ?? "embedpdf";
-    const next: ViewerMode = current === "dialog" ? "embedpdf" : "dialog";
-    setViewerPreference(next);
-
-    if (next === "embedpdf") {
-      navigate(`/embedpdf-viewer?${psak.source_url ? `url=${encodeURIComponent(psak.source_url)}&` : ''}psakId=${psak.id}`);
-      return;
-    }
-
-    setSelectedPsak(psak);
-    setDialogOpen(true);
+    openDocument({ id: psak.id, title: psak.title, source_url: psak.source_url });
   };
 
   const handleEditPsak = (psakId: string) => {
@@ -811,15 +777,6 @@ const PsakDinTab = () => {
                                     size="icon"
                                     variant="ghost"
                                     className="h-8 w-8 text-muted-foreground hover:text-primary"
-                                    title="החלף צפיין"
-                                    onClick={(e) => handleSwitchViewer(psak, e)}
-                                  >
-                                    <ArrowUpDown className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
                                     title="ערוך שם"
                                     onClick={(e) => { e.stopPropagation(); handleEditPsak(psak.id); }}
                                   >
@@ -951,7 +908,6 @@ const PsakDinTab = () => {
           </TabsContent>
         </Tabs>
 
-        <PsakDinViewDialog psak={selectedPsak} open={dialogOpen} onOpenChange={setDialogOpen} />
         <PsakDinEditDialog psak={editingPsak} open={editDialogOpen} onOpenChange={setEditDialogOpen} onSaved={handleEditSaved} isNew={isNewPsak} />
       </div>
     </div>

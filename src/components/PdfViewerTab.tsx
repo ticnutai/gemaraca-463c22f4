@@ -54,7 +54,7 @@ const STORAGE_KEYS = {
   recentUrls: "pdf-viewer-recent-urls-v1",
 } as const;
 
-type ViewerEngine = "browser" | "embedpdf";
+type ViewerEngine = "browser";
 type ViewMode = "single" | "split" | "compare";
 type ThemeKey = "cobalt" | "sand" | "noir";
 
@@ -73,13 +73,6 @@ const VIEWER_OPTIONS: ViewerOption[] = [
     label: "צפיין מובנה",
     description: "מנוע PDF מובנה בדפדפן — מהיר ואמין",
     icon: Monitor,
-    available: true,
-  },
-  {
-    id: "embedpdf",
-    label: "EmbedPDF (pdfium)",
-    description: "מנוע PDF מתקדם — רינדור מקורי עם סרגל כלים מובנה",
-    icon: FileText,
     available: true,
   },
 ];
@@ -123,7 +116,7 @@ const PdfViewerTab = () => {
     loadFromStorage<ViewerEngine | null>(STORAGE_KEYS.defaultViewer, null)
   );
   const [activeViewer, setActiveViewer] = useState<ViewerEngine>(
-    () => defaultViewer ?? "embedpdf"
+    () => defaultViewer ?? "browser"
   );
 
   // View mode & theme
@@ -242,20 +235,6 @@ const PdfViewerTab = () => {
       );
     }
 
-    if (engine === "embedpdf") {
-      // EmbedPDF engine — uses browser's native pdfium-based PDF renderer via <embed>
-      // Provides built-in toolbar with page navigation, zoom, search, download, print
-      return (
-        <embed
-          src={`${url}#zoom=${zoom}&toolbar=1`}
-          type="application/pdf"
-          className="w-full h-full rounded-lg"
-          title="EmbedPDF Viewer"
-          style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
-        />
-      );
-    }
-
     // Browser native viewer (default)
     return (
       <iframe
@@ -344,89 +323,6 @@ const PdfViewerTab = () => {
         </div>
       </div>
 
-      {/* Viewer engine selector */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Monitor className="h-4 w-4 text-primary" />
-            בחירת צפיין
-            {defaultViewer && (
-              <Badge variant="outline" className="text-[10px] gap-1">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                ברירת מחדל: {VIEWER_OPTIONS.find((v) => v.id === defaultViewer)?.label}
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleClearDefault(); }}
-                  className="mr-1 hover:text-destructive transition-colors"
-                  aria-label="נקה ברירת מחדל"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {VIEWER_OPTIONS.map((opt) => {
-              const isActive = activeViewer === opt.id;
-              const isDefault = defaultViewer === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => opt.available && setActiveViewer(opt.id)}
-                  disabled={!opt.available}
-                  className={cn(
-                    "relative flex flex-col items-start gap-2 p-4 rounded-xl border-2 text-right transition-all",
-                    opt.available
-                      ? isActive
-                        ? "border-primary bg-primary/5 shadow-md"
-                        : "border-border hover:border-primary/40 hover:bg-muted/50"
-                      : "border-border/30 bg-muted/20 opacity-60 cursor-not-allowed"
-                  )}
-                >
-                  {/* Default star */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!opt.available) return;
-                      if (isDefault) handleClearDefault();
-                      else handleSetDefault(opt.id);
-                    }}
-                    className={cn(
-                      "absolute top-2 left-2 p-1 rounded-full transition-colors",
-                      isDefault
-                        ? "text-yellow-500 hover:text-yellow-600"
-                        : "text-muted-foreground/40 hover:text-yellow-400"
-                    )}
-                    aria-label={isDefault ? "הסר ברירת מחדל" : "קבע כברירת מחדל"}
-                    disabled={!opt.available}
-                  >
-                    {isDefault ? (
-                      <Star className="h-4 w-4 fill-current" />
-                    ) : (
-                      <StarOff className="h-4 w-4" />
-                    )}
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    <opt.icon className={cn("h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")} />
-                    <span className={cn("font-semibold text-sm", isActive ? "text-primary" : "text-foreground")}>
-                      {opt.label}
-                    </span>
-                    {opt.badge && (
-                      <Badge variant="secondary" className="text-[10px]">{opt.badge}</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{opt.description}</p>
-                  {isActive && opt.available && (
-                    <Badge className="text-[10px]">פעיל</Badge>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* PDF source input */}
       <Card>
@@ -581,7 +477,7 @@ const PdfViewerTab = () => {
 
           <div className="flex items-center gap-1">
             {/* Zoom controls (browser & embedpdf viewers) */}
-            {(activeViewer === "browser" || activeViewer === "embedpdf") && (
+            {activeViewer === "browser" && (
               <>
                 <Button
                   variant="ghost"

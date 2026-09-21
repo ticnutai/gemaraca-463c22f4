@@ -19,8 +19,7 @@ import IndexTableView from './talmud-index/TableView';
 import CardsView from './talmud-index/CardsView';
 import TreeViewIndex from './talmud-index/TreeViewIndex';
 import GenealogyTreeView from './talmud-index/GenealogyTreeView';
-import PsakDinViewDialog from './PsakDinViewDialog';
-import ViewerPreferenceDialog, { getViewerPreference, setViewerPreference, type ViewerMode } from './ViewerPreferenceDialog';
+import { useDocumentViewer } from './DocumentViewerProvider';
 import IndexingControlPanel from './IndexingControlPanel';
 import AnalysisControlPanel from './AnalysisControlPanel';
 import DebugDiagnosticDialog from './DebugDiagnosticDialog';
@@ -110,54 +109,13 @@ export default function AdvancedIndexTab() {
   }, [correctRef]);
 
   // Load selected psak for dialog
-  const [selectedPsak, setSelectedPsak] = useState<Database['public']['Tables']['psakei_din']['Row'] | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [prefDialogOpen, setPrefDialogOpen] = useState(false);
-  const [pendingRef, setPendingRef] = useState<TalmudRefWithPsak | null>(null);
-  const [preferredViewer, setPreferredViewer] = useState<ViewerMode>(() => getViewerPreference() ?? 'embedpdf');
   const navigate = useNavigate();
 
-  const openWithMode = useCallback(async (ref: TalmudRefWithPsak, mode: ViewerMode) => {
-    const { data } = await supabase
-      .from('psakei_din')
-      .select('*')
-      .eq('id', ref.psak_din_id)
-      .maybeSingle();
-    if (!data) return;
-
-    switch (mode) {
-      case 'dialog':
-        setSelectedPsak(data);
-        setDialogOpen(true);
-        break;
-      case 'embedpdf': {
-        const sourceUrl = data.source_url;
-        navigate(`/embedpdf-viewer?${sourceUrl ? `url=${encodeURIComponent(sourceUrl)}&` : ''}title=${encodeURIComponent(data.title)}&psakId=${data.id}`);
-        break;
-      }
-      case 'newwindow': {
-        const sourceUrl = data.source_url;
-        if (sourceUrl) {
-          window.open(sourceUrl, '_blank');
-        } else {
-          setSelectedPsak(data);
-          setDialogOpen(true);
-        }
-        break;
-      }
-    }
-  }, [navigate]);
-
+  const { open: openDocument } = useDocumentViewer();
   const openPsakDialog = useCallback(async (ref: TalmudRefWithPsak) => {
-    const saved = getViewerPreference();
-    openWithMode(ref, saved ?? "embedpdf");
-  }, [openWithMode]);
-
-  const toggleViewerPreference = useCallback(() => {
-    const next: ViewerMode = preferredViewer === 'dialog' ? 'embedpdf' : 'dialog';
-    setPreferredViewer(next);
-    setViewerPreference(next);
-  }, [preferredViewer]);
+    const { data } = await supabase.from('psakei_din').select('id, title, source_url').eq('id', ref.psak_din_id).maybeSingle();
+    if (data) openDocument({ id: data.id, title: data.title, source_url: data.source_url });
+  }, [openDocument]);
 
   if (isLoading) {
     return (
@@ -352,16 +310,6 @@ export default function AdvancedIndexTab() {
           ))}
         </div>
         <div className="flex items-center gap-1.5">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 gap-1 text-xs"
-            onClick={toggleViewerPreference}
-            title="החלף ברירת מחדל לצפיין"
-          >
-            <ChevronsUpDown className="w-3.5 h-3.5" />
-            {preferredViewer === 'dialog' ? 'רגיל' : 'EmbedPDF'}
-          </Button>
           <span className="text-xs text-muted-foreground">צבע הדגשה:</span>
           {HIGHLIGHT_COLORS.map((c, i) => (
             <button
@@ -407,29 +355,7 @@ export default function AdvancedIndexTab() {
         </>
       )}
 
-      {/* Psak Din Viewer Dialog */}
-      {selectedPsak && (
-        <PsakDinViewDialog
-          open={dialogOpen}
-          onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) setSelectedPsak(null);
-          }}
-          psak={selectedPsak}
-        />
-      )}
 
-      {/* Viewer Preference Dialog */}
-      <ViewerPreferenceDialog
-        open={prefDialogOpen}
-        onOpenChange={setPrefDialogOpen}
-        onSelect={(mode) => {
-          if (pendingRef) {
-            openWithMode(pendingRef, mode);
-            setPendingRef(null);
-          }
-        }}
-      />
 
       {/* Correction Dialog */}
       {correctionRef && (

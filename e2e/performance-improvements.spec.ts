@@ -192,13 +192,8 @@ test.describe("FTS — חיפוש טקסט מלא", () => {
 /* ═══════════════════════════════════════════════ */
 
 test.describe("Streaming Beautify — פסק דין מעוצב", () => {
-  test("3.1 PsakDinViewDialog opens and shows beautify button", async ({ page }) => {
+  test("3.1 Document viewer opens in a dialog with the beautify tool", async ({ page }) => {
     await goHome(page);
-
-    // Set default viewer to 'dialog'
-    await page.evaluate(() => {
-      localStorage.setItem("psak-din-default-viewer", "dialog");
-    });
 
     await openSidebarTab(page, "פסקי דין");
     await page.waitForTimeout(3000);
@@ -208,18 +203,12 @@ test.describe("Streaming Beautify — פסק דין מעוצב", () => {
     if (await psakCard.isVisible({ timeout: 5000 }).catch(() => false)) {
       await psakCard.click();
       
-      // Wait for dialog
-      await page.waitForTimeout(2000);
-
-      // Check that beautify button exists
-      const hasBeautify = await page.locator("text=עיצוב").first()
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
-
-      // The button should exist (even if we don't click it to avoid AI cost)
-      if (hasBeautify) {
-        expect(hasBeautify).toBe(true);
-      }
+      // The single viewer opens in a dialog that embeds the viewer page
+      const frame = page.getByRole("dialog").locator("iframe[src*='/embedpdf-viewer?']");
+      await expect(frame).toBeVisible({ timeout: 10_000 });
+      // The beautify tool lives in the embedded viewer's toolbar
+      const beautify = page.frameLocator("iframe[src*='/embedpdf-viewer?']").getByTitle(/עצב פסק דין/);
+      await expect(beautify).toBeVisible({ timeout: 15_000 });
     }
     // If no psak visible, skip (empty DB)
   });

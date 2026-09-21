@@ -21,7 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { useQuery } from "@tanstack/react-query";
-import PsakDinViewDialog from "./PsakDinViewDialog";
+import { useDocumentViewer } from "./DocumentViewerProvider";
 import FileTypeBadge from "./FileTypeBadge";
 import SummaryToggle from "./SummaryToggle";
 import { useGemaraDownloadStore } from "@/stores/gemaraDownloadStore";
@@ -69,6 +69,7 @@ interface MasechetExplorerDialogProps {
 
 const MasechetExplorerDialog = ({ open, onOpenChange }: MasechetExplorerDialogProps) => {
   const navigate = useNavigate();
+  const { open: openDocument } = useDocumentViewer();
   const { setSelectedMasechet, setActiveTab } = useAppContext();
 
   const [step, setStep] = useState<Step>("sedarim");
@@ -77,8 +78,6 @@ const MasechetExplorerDialog = ({ open, onOpenChange }: MasechetExplorerDialogPr
   const [selectedDaf, setSelectedDaf] = useState<number | null>(null);
   const [dafPsakim, setDafPsakim] = useState<DafPsak[]>([]);
   const [loadingPsakim, setLoadingPsakim] = useState(false);
-  const [viewPsak, setViewPsak] = useState<DafPsak | null>(null);
-  const [viewPsakOpen, setViewPsakOpen] = useState(false);
 
   const enqueueJobRaw = useGemaraDownloadStore((s) => s.enqueueJob);
   const { toast: downloadToast } = useToast();
@@ -546,20 +545,7 @@ const MasechetExplorerDialog = ({ open, onOpenChange }: MasechetExplorerDialogPr
                     {dafPsakim.map((psak) => (
                       <button
                         key={psak.id}
-                        onClick={() => {
-                          setViewPsak({
-                            id: psak.id,
-                            psak_din_id: psak.psak_din_id,
-                            title: psak.title,
-                            court: psak.court,
-                            year: psak.year,
-                            summary: psak.summary,
-                            tags: psak.tags,
-                            relevance_score: psak.relevance_score,
-                            connection: psak.connection,
-                          });
-                          setViewPsakOpen(true);
-                        }}
+                        onClick={() => openDocument({ id: psak.psak_din_id, title: psak.title, source_url: (psak as any).source_url })}
                         className={cn(
                           "w-full text-right p-4 rounded-xl border border-border transition-all duration-200",
                           "hover:shadow-md hover:border-primary/30 hover:bg-primary/5 active:scale-[0.99]",
@@ -618,11 +604,6 @@ const MasechetExplorerDialog = ({ open, onOpenChange }: MasechetExplorerDialogPr
         </DialogContent>
       </Dialog>
 
-      <PsakDinViewDialog
-        psak={viewPsak}
-        open={viewPsakOpen}
-        onOpenChange={setViewPsakOpen}
-      />
     </>
   );
 };
