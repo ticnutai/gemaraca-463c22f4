@@ -76,3 +76,4 @@ scripts/data/daat/
 scripts/data/daat_index.json
 scripts/data/daat_short.json
 scripts/build/
+scripts/data/daf-cache/
