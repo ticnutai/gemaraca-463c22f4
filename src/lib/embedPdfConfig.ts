@@ -63,6 +63,9 @@ export function baseViewerConfig(): Omit<PDFViewerConfig, "src" | "theme"> {
     pan: { defaultMode: "never" },
     // Redaction rewrites the PDF and removes text for good — not a study tool.
     disabledCategories: ["redaction"],
+    // No stamp manifests from jsDelivr: the viewer makes no third-party request at all
+    // (users can still create their own stamps).
+    stamp: { manifests: [] },
     annotations: {
       colorPresets: ["#FFEB3B", "#81C784", "#64B5F6", "#FF8A65", "#CE93D8", "#F48FB1", "#FCA5A5"],
     },
