@@ -51,6 +51,32 @@ export const isPossibleDaf = (tractate: string, daf: string | number) => {
   return Boolean(max) && Number.isFinite(n) && n >= 2 && n <= max;
 };
 
+/**
+ * מקורות מסוימים ממספרים עמודים ברצף במקום דפים: מסכת של 30 דפים מופיעה אצלם
+ * כ-58 עמודים, כי כל דף מורכב מעמוד א ועמוד ב. הפונקציה ממירה מספר עמוד רץ
+ * לדף ולעמוד. עמוד 1 הוא דף ב׳ עמוד א׳, כי הגמרא מתחילה בדף ב׳.
+ *
+ * מחזירה null כשהמספר אינו יכול להיות עמוד במסכת הזו.
+ *
+ * זהירות: אין להפעיל את זה על כל מספר שחורג מטווח הדפים. בנתונים של הפרויקט
+ * נבדקו 1,547 חריגות כאלה, ו-1,542 מהן לא היו ציטוטים אלא צירופי אותיות שהומרו
+ * בגימטריה ("שבת שהד" → דף 309). המרה עיוורת הייתה מחזירה את הזבל הזה כדף תקין.
+ * להשתמש רק כשידוע שהמקור מספר עמודים.
+ */
+export function amudIndexToDaf(tractate: string, amudIndex: number): { daf: number; amud: "a" | "b" } | null {
+  const max = MAX_DAF[tractate];
+  const n = Number(amudIndex);
+  if (!max || !Number.isFinite(n) || n < 1) return null;
+  if (n > (max - 1) * 2) return null; // מעבר למספר העמודים במסכת
+  return { daf: Math.floor((n - 1) / 2) + 2, amud: n % 2 === 1 ? "a" : "b" };
+}
+
+/** מספר העמודים במסכת: כל דף מ-ב׳ ועד האחרון, כפול שניים */
+export const amudimInTractate = (tractate: string) => {
+  const max = MAX_DAF[tractate];
+  return max ? (max - 1) * 2 : 0;
+};
+
 /** מריץ את החילוץ על כל הקטעים ומחזיר רשימה מאוחדת, בלי כפילויות */
 export async function extractReferencesFromText(
   text: string,
