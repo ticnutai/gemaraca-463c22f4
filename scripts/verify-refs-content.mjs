@@ -202,7 +202,7 @@ async function searchQuote(quote) {
   if (phrase.split(' ').length < 5) return null;
   try {
     const url = `https://he.wikisource.org/w/api.php?action=query&list=search&format=json&srlimit=6&srsearch=${encodeURIComponent(`"${phrase}"`)}`;
-    const j = await wikisource(url, { gap: 1200 });
+    const j = await wikisource(url, { gap: 2500, retries: 4 });
     if (!j) return { error: true };
     for (const hit of j.query?.search ?? []) {
       const m = String(hit.title).match(/^(.+?) ([א-ת]{1,4}) ([אב])$/);
