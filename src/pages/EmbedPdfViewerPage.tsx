@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   FileText, Bookmark, Download, Search, Trash2, Plus, ExternalLink, BookOpen,
   Palette, Maximize2, Minimize2, RefreshCw, Bold, Italic, Underline, AlignRight,
@@ -30,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import PsakDinViewDialog from "@/components/PsakDinViewDialog";
 import { TEMPLATES, generateFromTemplate } from "@/lib/psakDinTemplates";
 import { parsePsakDinText } from "@/lib/psakDinParser";
+import { toHouseStyledHtml, type PsakMeta } from "@/lib/psakDinHtmlTemplate";
 import { PDFViewer as EmbedPDFViewer, type PDFViewerConfig } from "@embedpdf/react-pdf-viewer";
 
 
@@ -383,6 +385,20 @@ function loadPsakFormat(psakId: string): TextFormat | null {
   return null;
 }
 
+/** The stored ruling's own fields, as the house template expects them. */
+function psakMeta(psak: {
+  title?: string; court?: string; case_number?: string; year?: number; summary?: string; source_url?: string;
+}): PsakMeta {
+  return {
+    title: psak.title,
+    court: psak.court,
+    year: psak.year,
+    caseNumber: psak.case_number,
+    summary: psak.summary,
+    sourceUrl: psak.source_url,
+  };
+}
+
 function loadPsakFavorites(): Set<string> {
   try {
     const stored = localStorage.getItem(PSAK_FAVORITES_KEY);
@@ -566,6 +582,7 @@ export default function EmbedPdfViewerPage() {
   const navigate = useNavigate();
   const { setActiveTab } = useAppContext();
   const embeddedMode = searchParams.get("embedded") === "1";
+  const isMobile = useIsMobile();
   const externalBookIdParam = searchParams.get("bookId");
   const viewerStateKeyParam = searchParams.get("viewerStateKey");
   const [selectedPdfId, setSelectedPdfId] = useState<string | null>(() => externalBookIdParam);
@@ -1211,7 +1228,11 @@ export default function EmbedPdfViewerPage() {
   }, []);
 
   const rawLeftContentType = detectContentType(leftSourceUrl);
-  const leftContentType = (!leftSourceUrl && psakData?.full_text) ? 'html-embed' as ContentViewType : rawLeftContentType;
+  // A source URL that is a plain web page (gov.il, psakim.org …) cannot be framed —
+  // those sites send X-Frame-Options, so the iframe stays blank. When we hold the
+  // ruling's own text in the database, show that instead of the external page.
+  const useInternalText = !!psakData?.full_text && (!leftSourceUrl || rawLeftContentType === 'html-page');
+  const leftContentType = useInternalText ? 'html-embed' as ContentViewType : rawLeftContentType;
   const rightContentType = detectContentType(rightSourceUrl);
   const leftViewerUrl = getViewerUrl(leftSourceUrl, leftContentType);
   const rightViewerUrl = getViewerUrl(rightSourceUrl, rightContentType);
@@ -1304,7 +1325,7 @@ export default function EmbedPdfViewerPage() {
     setDocSearchSection('');
     htmlSearchHitsRef.current = [];
     htmlSearchIndexRef.current = -1;
-  }, [leftSourceUrl]);
+  }, [leftSourceUrl, psakData?.id]);
 
   // ── Download in multiple formats ──
   const getCurrentContent = useCallback((): { html: string; text: string; title: string } => {
@@ -1450,7 +1471,7 @@ export default function EmbedPdfViewerPage() {
 
   // Fetch HTML content for beautified .html files and render via srcDoc
   useEffect(() => {
-    if (leftContentType !== 'html-embed' || !leftSourceUrl) return;
+    if (useInternalText || leftContentType !== 'html-embed' || !leftSourceUrl) return;
     let cancelled = false;
     setFetchingHtml(true);
     setFetchHtmlError(null);
@@ -1468,18 +1489,25 @@ export default function EmbedPdfViewerPage() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setFetchHtmlError(err.message);
+        // The remote file is often unreachable from the browser (CORS, a site that
+        // has since moved the document). Fall back to our own copy of the ruling.
+        if (psakData?.full_text) {
+          setFetchedHtml(toHouseStyledHtml(psakData.full_text, psakMeta(psakData)));
+        } else {
+          setFetchHtmlError(err.message);
+        }
         setFetchingHtml(false);
       });
 
     return () => { cancelled = true; };
-  }, [leftSourceUrl, leftContentType]);
+  }, [leftSourceUrl, leftContentType, useInternalText, psakData]);
 
-  // Auto-populate fetchedHtml from psakData.full_text when no source URL
+  // Show the ruling we hold ourselves: already-styled rulings render as they are,
+  // plain imported text gets the house template so it looks like the rest of them.
   useEffect(() => {
-    if (leftSourceUrl || !psakData?.full_text || fetchedHtml) return;
-    setFetchedHtml(psakData.full_text);
-  }, [leftSourceUrl, psakData?.full_text, fetchedHtml]);
+    if (!useInternalText || !psakData?.full_text || fetchedHtml) return;
+    setFetchedHtml(toHouseStyledHtml(psakData.full_text, psakMeta(psakData)));
+  }, [useInternalText, psakData, fetchedHtml]);
 
   // ── Save HTML Embed Handlers ──
   const handleSaveHtmlEmbed = useCallback(async () => {
@@ -1495,7 +1523,13 @@ export default function EmbedPdfViewerPage() {
       const { data: urlData } = supabase.storage.from("psakei-din-files").getPublicUrl(fileName);
       // 2. Save to psakei_din DB if psakData exists
       if (psakData?.id) {
-        const { error } = await supabase.from("psakei_din").update({ full_text: currentHtml, source_url: urlData?.publicUrl || undefined }).eq("id", psakData.id);
+        // A ruling shown from our own copy keeps its origin link: the edited document
+        // lives in full_text, so overwriting source_url would only drop the reference
+        // to the court's site.
+        const { error } = await supabase.from("psakei_din").update({
+          full_text: currentHtml,
+          ...(useInternalText && leftSourceUrl ? {} : { source_url: urlData?.publicUrl || undefined }),
+        }).eq("id", psakData.id);
         if (error) throw error;
       }
       // 3. Save to user_books DB if selectedPdf exists
@@ -1508,7 +1542,7 @@ export default function EmbedPdfViewerPage() {
     } finally {
       setIsSavingHtmlEmbed(false);
     }
-  }, [psakData, fetchedHtml, canPersist, selectedPdf?.id, updateBookEditedText]);
+  }, [psakData, fetchedHtml, canPersist, selectedPdf?.id, updateBookEditedText, useInternalText, leftSourceUrl]);
 
   const handleCopyAndSaveHtmlEmbed = useCallback(async () => {
     setIsSavingHtmlEmbed(true);
@@ -2330,7 +2364,7 @@ export default function EmbedPdfViewerPage() {
       )}
       {/* ── Compact Header ── */}
       <header className={`border-b-2 border-[#D4AF37] bg-white px-3 ${embeddedMode ? 'py-1.5' : 'py-2'} shadow-sm flex-shrink-0`}>
-        <div className="flex items-center gap-2 max-w-[1800px] mx-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 max-w-[1800px] mx-auto min-w-0">
           {/* Back button */}
           {!embeddedMode && (
           <Button
@@ -2365,8 +2399,8 @@ export default function EmbedPdfViewerPage() {
 
           <Separator orientation="vertical" className="h-5 bg-[#D4AF37]/30 hidden sm:block" />
 
-          {/* View mode — icon-only buttons with tooltip */}
-          <div className="flex gap-0.5">
+          {/* View mode — icon-only buttons with tooltip; a phone has room for one pane only */}
+          <div className="hidden sm:flex gap-0.5">
             {([
               { mode: "single" as ViewMode, label: "יחיד", icon: <FileText className="h-3.5 w-3.5" /> },
               { mode: "split" as ViewMode, label: "מפוצל", icon: <Columns className="h-3.5 w-3.5" /> },
@@ -2449,8 +2483,8 @@ export default function EmbedPdfViewerPage() {
             onChange={handleFileUpload}
           />
 
-          {/* Icon toolbar */}
-          <div className="flex items-center gap-0.5 border border-[#D4AF37]/30 rounded-lg px-1 py-0.5 bg-[#D4AF37]/5">
+          {/* Icon toolbar — scrolls sideways on narrow screens instead of clipping */}
+          <div className="flex items-center gap-0.5 border border-[#D4AF37]/30 rounded-lg px-1 py-0.5 bg-[#D4AF37]/5 min-w-0 overflow-x-auto scrollbar-hide shrink">
             {toolbarItems.map((item) => (
               <button
                 key={item.id}
@@ -2500,11 +2534,11 @@ export default function EmbedPdfViewerPage() {
                 </button>
               </>
             )}
-            {/* Pin/unpin sidebar */}
-            <div className="w-px h-4 bg-[#D4AF37]/30" />
+            {/* Pin/unpin sidebar — the panel is an overlay on phones, nothing to pin */}
+            <div className="hidden sm:block w-px h-4 bg-[#D4AF37]/30" />
             <button
               onClick={() => setIconBarPinned(p => !p)}
-              className={`p-1.5 rounded-md transition-all ${
+              className={`hidden sm:block p-1.5 rounded-md transition-all ${
                 iconBarPinned
                   ? "bg-[#0B1F5B] text-white"
                   : "text-[#0B1F5B]/60 hover:bg-[#D4AF37]/15 hover:text-[#0B1F5B]"
@@ -2518,7 +2552,7 @@ export default function EmbedPdfViewerPage() {
           {/* Fullscreen toggle */}
           <button
             onClick={() => setViewerFullscreen(v => !v)}
-            className="p-1.5 rounded-md text-[#0B1F5B]/50 hover:text-[#0B1F5B] hover:bg-[#D4AF37]/10"
+            className="hidden sm:block p-1.5 rounded-md text-[#0B1F5B]/50 hover:text-[#0B1F5B] hover:bg-[#D4AF37]/10"
             title={viewerFullscreen ? "צמצם" : "מסך מלא"}
           >
             {viewerFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -2547,7 +2581,9 @@ export default function EmbedPdfViewerPage() {
       <div className="flex-1 flex min-h-0">
         {/* Panel overlay (slides from right) */}
         {activePanel && (
-          <aside className="w-72 xl:w-80 border-l-2 border-[#D4AF37]/30 bg-white flex-shrink-0 overflow-y-auto">
+          <aside className={isMobile
+            ? "fixed inset-x-0 bottom-0 top-[49px] z-40 bg-white overflow-y-auto shadow-2xl"
+            : "w-72 xl:w-80 border-l-2 border-[#D4AF37]/30 bg-white flex-shrink-0 overflow-y-auto"}>
             <div className="p-3 space-y-3">
               {/* Close */}
               <div className="flex items-center justify-between">
@@ -2558,14 +2594,14 @@ export default function EmbedPdfViewerPage() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className={`h-6 w-6 ${iconBarPinned ? "text-[#0B1F5B] bg-[#D4AF37]/20" : "text-[#0B1F5B]/40"}`}
+                    className={`hidden sm:inline-flex h-6 w-6 ${iconBarPinned ? "text-[#0B1F5B] bg-[#D4AF37]/20" : "text-[#0B1F5B]/40"}`}
                     title={iconBarPinned ? "בטל הצמדת סרגל צד" : "הצמד סרגל צד פתוח"}
                     onClick={() => setIconBarPinned(p => !p)}
                   >
                     {iconBarPinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setActivePanel(null)}>
-                    <Trash2 className="h-3 w-3 text-[#0B1F5B]/40" />
+                  <Button size="icon" variant="ghost" className="h-7 w-7 sm:h-6 sm:w-6" onClick={() => setActivePanel(null)} title="סגור">
+                    <X className="h-3.5 w-3.5 text-[#0B1F5B]/60" />
                   </Button>
                 </div>
               </div>
@@ -3221,7 +3257,7 @@ export default function EmbedPdfViewerPage() {
               {/* ═══ BEAUTIFIED FORMATTING TOOLBAR ═══ */}
               {beautifiedHtml && activePanel === "beautify" && (
                 <div className="border-b-2 border-[#D4AF37]/20 bg-white/80 backdrop-blur-sm flex-shrink-0">
-                  <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                  <div className="px-2 py-1.5 flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
                     <span className="text-[10px] text-[#D4AF37] font-semibold ml-2">עריכת מסמך מעוצב</span>
                     <div className="w-px h-5 bg-[#D4AF37]/20" />
 
@@ -3419,7 +3455,7 @@ export default function EmbedPdfViewerPage() {
               {/* ═══ TEXT FORMATTING TOOLBAR ═══ */}
               {leftContentType === 'text' && fetchedText !== null && !(beautifiedHtml && activePanel === "beautify") && (
                 <div className="border-b-2 border-[#D4AF37]/20 bg-white/80 backdrop-blur-sm flex-shrink-0">
-                  <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                  <div className="px-2 py-1.5 flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
                     {/* Font selector */}
                     <Popover>
                       <PopoverTrigger asChild>
@@ -3581,7 +3617,7 @@ export default function EmbedPdfViewerPage() {
               {/* ═══ HTML-EMBED EDITING TOOLBAR ═══ */}
               {leftContentType === 'html-embed' && fetchedHtml && !(beautifiedHtml && activePanel === "beautify") && (
                 <div className="border-b-2 border-[#D4AF37]/20 bg-white/80 backdrop-blur-sm flex-shrink-0">
-                  <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                  <div className="px-2 py-1.5 flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
                     <span className="text-[10px] text-[#D4AF37] font-semibold ml-2">עריכת מסמך HTML</span>
                     <div className="w-px h-5 bg-[#D4AF37]/20" />
 
@@ -3786,7 +3822,7 @@ export default function EmbedPdfViewerPage() {
               {/* ═══ HTML-PAGE TOOLBAR ═══ */}
               {leftContentType === 'html-page' && !(beautifiedHtml && activePanel === "beautify") && (
                 <div className="border-b-2 border-[#D4AF37]/20 bg-white/80 backdrop-blur-sm flex-shrink-0">
-                  <div className="px-2 py-1.5 flex items-center gap-1 flex-wrap">
+                  <div className="px-2 py-1.5 flex items-center gap-1 flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
                     <span className="text-[10px] text-[#D4AF37] font-semibold ml-2">צפייה בדף חיצוני</span>
                     <div className="w-px h-5 bg-[#D4AF37]/20" />
                     {/* Template Switcher */}

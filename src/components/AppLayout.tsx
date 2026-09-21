@@ -86,7 +86,8 @@ const AppLayoutInner = ({ children }: AppLayoutProps) => {
           "flex-1 flex flex-col min-w-0 transition-all duration-300",
           shouldReserveSpace ? "md:mr-[--sidebar-width]" : ""
         )}>
-          <main className="flex-1" style={{
+          {/* Bottom padding on phones keeps the floating buttons off the last card's actions */}
+          <main className="flex-1 pb-24 md:pb-0" style={{
             fontFamily: 'var(--page-font-family, inherit)',
             fontSize: 'var(--page-font-size, inherit)',
             lineHeight: 'var(--page-line-height, inherit)',

@@ -427,32 +427,33 @@ const SugyaDetail = () => {
         {/* Main Tabs - flattened single row.
             "המחשה" lives only here (removed from inside the Gemara tab to avoid duplication). */}
         <Tabs value={mainTab} onValueChange={setMainTab} className="w-full" dir="rtl">
-          <TabsList className="grid w-full grid-cols-7 mb-6 h-auto sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 shadow-sm">
-            <TabsTrigger value="gemara" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+          {/* Phone: one scrollable row; desktop: seven equal columns */}
+          <TabsList className="flex w-full justify-start overflow-x-auto scrollbar-hide md:grid md:grid-cols-7 mb-4 md:mb-6 h-auto sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 shadow-sm">
+            <TabsTrigger value="gemara" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
               <BookOpen className="w-4 h-4 hidden sm:block" />
               גמרא
             </TabsTrigger>
-            <TabsTrigger value="commentaries" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+            <TabsTrigger value="commentaries" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
               <BookOpen className="w-4 h-4 hidden sm:block" />
               מפרשים
             </TabsTrigger>
-            <TabsTrigger value="lexicon" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+            <TabsTrigger value="lexicon" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
               <FileText className="w-4 h-4 hidden sm:block" />
               מילון
             </TabsTrigger>
-            <TabsTrigger value="illustration" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+            <TabsTrigger value="illustration" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
               <Lightbulb className="w-4 h-4 hidden sm:block" />
               המחשה
             </TabsTrigger>
-            <TabsTrigger value="psakim" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+            <TabsTrigger value="psakim" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
               <Scale className="w-4 h-4 hidden sm:block" />
               פסקי דין
             </TabsTrigger>
-            <TabsTrigger value="analysis" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+            <TabsTrigger value="analysis" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
               <HelpCircle className="w-4 h-4 hidden sm:block" />
               הסבר
             </TabsTrigger>
-            <TabsTrigger value="ai-tools" className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm">
+            <TabsTrigger value="ai-tools" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
               <Lightbulb className="w-4 h-4 hidden sm:block" />
               AI כלים
             </TabsTrigger>

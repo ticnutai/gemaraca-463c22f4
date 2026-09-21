@@ -558,9 +558,9 @@ const PsakDinTab = () => {
             ) : (
               <div className="max-w-4xl mx-auto space-y-4">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-4 flex-row-reverse">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-foreground">פסקי דין</h2>
+                <div className="flex items-center justify-between mb-4 flex-row-reverse flex-wrap gap-2">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <h2 className="text-xl sm:text-2xl font-bold text-foreground whitespace-nowrap">פסקי דין</h2>
                     <Badge variant="secondary">{totalCount.toLocaleString()} פסקים</Badge>
                     <Button size="sm" onClick={handleAddNew} className="gap-2">
                       <Plus className="w-4 h-4" />
@@ -757,7 +757,7 @@ const PsakDinTab = () => {
                             {/* Top Row: Title + Hover Actions */}
                             <div className="flex items-start justify-between gap-3 mb-3">
                               <div className="flex-1 cursor-pointer" onClick={() => handlePsakClick(psak)}>
-                                <h3 className="text-lg font-semibold text-foreground text-right mb-2 leading-tight flex items-center gap-2 justify-end">
+                                <h3 className="text-base sm:text-lg font-semibold text-foreground text-right mb-2 leading-tight flex items-center gap-2 justify-end">
                                   {Number((psak as Record<string, unknown>).beautify_count) > 0 && (
                                     <Badge className="gap-1 text-[10px] px-1.5 py-0.5 bg-amber-500/15 text-amber-600 border border-amber-500/30 dark:text-amber-400">
                                       <Paintbrush className="w-3 h-3" />
@@ -802,9 +802,9 @@ const PsakDinTab = () => {
 
                               {/* Hover action icons + checkbox */}
                               <div className="flex items-center gap-1 shrink-0">
-                                {/* Hover icons - only visible on hover */}
+                                {/* Hover icons - only visible on hover; a phone has no hover and no room */}
                                 <div className={cn(
-                                  "flex items-center gap-0.5 transition-opacity duration-150",
+                                  "hidden md:flex items-center gap-0.5 transition-opacity duration-150",
                                   isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
                                 )}>
                                   <Button

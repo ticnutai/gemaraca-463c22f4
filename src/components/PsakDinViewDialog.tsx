@@ -39,6 +39,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getCachedBeautified, cacheBeautified, cachePsak } from "@/lib/psakCache";
 import { parsePsakDinText } from "@/lib/psakDinParser";
+import { toHouseStyledHtml } from "@/lib/psakDinHtmlTemplate";
 import { TEMPLATES, generateFromTemplate } from "@/lib/psakDinTemplates";
 
 const VIEWER_TEXT_SETTINGS_KEY = 'psak-din-viewer-text-settings';
@@ -197,7 +198,11 @@ const PsakDinViewDialog = ({ psak, open, onOpenChange, onSave }: PsakDinViewDial
   useEffect(() => {
     if (open && psak) {
       const sourceUrl = psak.source_url || psak.sourceUrl;
-      setActiveTab(sourceUrl ? "preview" : "info");
+      const storedText = psak.full_text || psak.fullText || "";
+      // A plain web page (gov.il, psakim.org) refuses to be framed; when we hold the
+      // ruling ourselves, open straight on the styled copy instead of a blank frame.
+      const isWebPage = !!sourceUrl && !/\.(pdf|docx?|txt|rtf|html?)(\?|#|$)/i.test(sourceUrl);
+      setActiveTab(sourceUrl && !(isWebPage && storedText.trim()) ? "preview" : storedText.trim() ? "beautified" : "info");
       setIsEditing(false);
       setSelectedTemplate("classic");
       // Try loading cached beautified HTML
@@ -230,9 +235,15 @@ const PsakDinViewDialog = ({ psak, open, onOpenChange, onSave }: PsakDinViewDial
       const ft = psak.full_text || psak.fullText || "";
       const isHtmlContent = /<[a-z][\s\S]*>/i.test(ft);
       setRichHtml(isHtmlContent ? ft : plainTextToHtml(ft));
-      // If full_text already contains beautified HTML, auto-load it
+      // If full_text already contains beautified HTML, auto-load it; plain text
+      // gets the house template so the "מעוצב" tab always has something to show
       if (isHtmlContent && !beautifiedHtml) {
         setBeautifiedHtml(ft);
+      } else if (!isHtmlContent && ft.trim() && isWebPage) {
+        setBeautifiedHtml(toHouseStyledHtml(ft, {
+          title: psak.title, court: psak.court, year: psak.year || undefined,
+          caseNumber: psak.case_number || psak.caseNumber, summary: psak.summary, sourceUrl,
+        }));
       }
       setEditTags((psak.tags || []).join(", "));
     }
@@ -1029,12 +1040,12 @@ const PsakDinViewDialog = ({ psak, open, onOpenChange, onSave }: PsakDinViewDial
         className={`flex flex-col overflow-hidden bg-card border-border ${
           isFullscreen 
             ? 'max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh]' 
-            : 'max-w-4xl max-h-[90vh]'
+            : 'w-[calc(100vw-0.75rem)] sm:w-full max-w-4xl max-h-[94dvh] sm:max-h-[90vh]'
         }`}
       >
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-start justify-between">
-            <DialogTitle className="text-xl font-bold text-foreground text-right flex-1 flex items-center gap-2 justify-end">
+            <DialogTitle className="text-base sm:text-xl font-bold text-foreground text-right flex-1 flex items-center gap-2 justify-end leading-snug">
               <FileTypeBadge url={psak.source_url || psak.sourceUrl} size="sm" />
               {psak.title}
             </DialogTitle>
@@ -1353,31 +1364,31 @@ const PsakDinViewDialog = ({ psak, open, onOpenChange, onSave }: PsakDinViewDial
                   {fileType === 'pdf' ? (
                     <iframe
                       src={`${sourceUrl}#toolbar=1&navpanes=1&scrollbar=1`}
-                      className="w-full h-full min-h-[500px]"
+                      className="w-full h-full min-h-[320px] sm:min-h-[500px]"
                       title="צפייה בפסק דין"
                     />
                   ) : fileType === 'doc' ? (
                     <iframe
                       src={getPreviewUrl(sourceUrl, fileType)}
-                      className="w-full h-full min-h-[500px]"
+                      className="w-full h-full min-h-[320px] sm:min-h-[500px]"
                       title="צפייה בפסק דין"
                     />
                   ) : fileType === 'html' ? (
                     fetchingHtmlPreview ? (
-                      <div className="flex items-center justify-center h-full min-h-[500px]">
+                      <div className="flex items-center justify-center h-full min-h-[320px] sm:min-h-[500px]">
                         <Loader2 className="w-6 h-6 animate-spin text-[#D4AF37]" />
                       </div>
                     ) : fetchedHtmlPreview ? (
                       <iframe
                         srcDoc={fetchedHtmlPreview}
-                        className="w-full h-full min-h-[500px]"
+                        className="w-full h-full min-h-[320px] sm:min-h-[500px]"
                         title="צפייה בפסק דין מעוצב"
                         sandbox="allow-same-origin allow-scripts allow-popups"
                       />
                     ) : (
                       <iframe
                         src={sourceUrl}
-                        className="w-full h-full min-h-[500px]"
+                        className="w-full h-full min-h-[320px] sm:min-h-[500px]"
                         title="צפייה בפסק דין מעוצב"
                         sandbox="allow-same-origin allow-scripts"
                       />
@@ -1387,7 +1398,7 @@ const PsakDinViewDialog = ({ psak, open, onOpenChange, onSave }: PsakDinViewDial
                   ) : (
                     <iframe
                       src={sourceUrl}
-                      className="w-full h-full min-h-[500px]"
+                      className="w-full h-full min-h-[320px] sm:min-h-[500px]"
                       title="צפייה בפסק דין"
                       sandbox="allow-same-origin allow-scripts"
                     />
@@ -1440,7 +1451,7 @@ const PsakDinViewDialog = ({ psak, open, onOpenChange, onSave }: PsakDinViewDial
             ) : (
               <div className="h-full flex flex-col">
                 {/* Toolbar */}
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <div className="flex items-center gap-2 mb-2 flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
                   <div className="w-[210px]">
                     <Select value={selectedTemplate} onValueChange={handleTemplateSelection}>
                       <SelectTrigger className="h-8">
@@ -1627,7 +1638,7 @@ const PsakDinViewDialog = ({ psak, open, onOpenChange, onSave }: PsakDinViewDial
                   <iframe
                     ref={beautifyIframeRef}
                     srcDoc={beautifiedHtml}
-                    className="w-full h-full min-h-[500px]"
+                    className="w-full h-full min-h-[320px] sm:min-h-[500px]"
                     title="פסק דין מעוצב"
                     sandbox="allow-same-origin allow-popups"
                     onLoad={() => {
@@ -1644,7 +1655,7 @@ const PsakDinViewDialog = ({ psak, open, onOpenChange, onSave }: PsakDinViewDial
         </Tabs>
 
         {/* Actions */}
-        <div className="flex-shrink-0 pt-4 border-t border-border flex gap-2 justify-end flex-wrap">
+        <div className="flex-shrink-0 pt-4 border-t border-border flex gap-2 justify-end flex-nowrap overflow-x-auto scrollbar-hide sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
           {/* Beautify button — always visible */}
           <Button
             variant="outline"

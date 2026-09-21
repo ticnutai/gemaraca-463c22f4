@@ -1,4 +1,4 @@
-import type { ParsedPsakDin } from './psakDinParser';
+import { parsePsakDinText, type ParsedPsakDin } from './psakDinParser';
 import { classifyLines, classifiedLinesToHtml } from './smartTextFormatter';
 
 function esc(str: string): string {
@@ -209,6 +209,20 @@ export function generatePsakDinHtml(data: ParsedPsakDin): string {
             body { background: white; padding: 0; }
             .container { box-shadow: none; border: none; padding: 20px; }
         }
+        /* טלפון: המסגרת נצמדת לרוחב המסך, טבלת הפרטים נערמת שורה מתחת לשורה */
+        @media (max-width: 640px) {
+            body { padding: 8px; }
+            .container { margin: 8px auto; padding: 20px 14px; border-radius: 6px; }
+            .header { margin-bottom: 24px; }
+            .header h1 { font-size: 2em; }
+            .section-title { font-size: 1.35em; margin-top: 24px; }
+            .subsection-title { font-size: 1.15em; }
+            .details-table td { display: block; width: auto; padding: 4px 0; }
+            .details-table td:first-child { width: auto; border-bottom: none; padding-top: 12px; }
+            .details-table tr:last-child td:last-child { border-bottom: none; }
+            .details-table a, .psakim-link a { word-break: break-all; overflow-wrap: anywhere; }
+            .detected-quote { margin: 12px 0; padding: 8px 12px; }
+        }
     </style>
 </head>
 <body>
@@ -305,4 +319,44 @@ export function generatePsakDinHtml(data: ParsedPsakDin): string {
     </div>
 </body>
 </html>`;
+}
+
+/** Metadata we hold about a ruling, which beats whatever the parser reads from the text. */
+export interface PsakMeta {
+  title?: string;
+  court?: string;
+  year?: number;
+  caseNumber?: string;
+  summary?: string;
+  sourceUrl?: string;
+}
+
+/** A ruling stored as a whole HTML document has already been styled. */
+export function isStyledDocument(text: string): boolean {
+  return /<!doctype html|<html[\s>]/i.test(text) || text.includes('class="container"');
+}
+
+/**
+ * Render a ruling's stored text with the house template, so an imported ruling looks
+ * like the ones that went through the styling pass. This is the single definition of
+ * that styling: the app renders with it on the fly and scripts/style-all-psakim.mjs
+ * writes it to the database. Text that is already a styled document is returned as is.
+ */
+export function toHouseStyledHtml(text: string, meta: PsakMeta = {}): string {
+  if (!text.trim() || isStyledDocument(text)) return text;
+  const parsed = parsePsakDinText(text);
+  // מה שידוע לנו במסד גובר על מה שהפרסר ניחש מהטקסט
+  if (meta.title) parsed.title = meta.title;
+  if (meta.court) parsed.court = meta.court || parsed.court;
+  if (meta.year) parsed.year = meta.year;
+  if (meta.caseNumber) parsed.caseNumber = meta.caseNumber;
+  if (meta.summary && !parsed.summary) parsed.summary = meta.summary;
+  // קישור לקובץ באחסון הפנימי ארוך מאוד וגולש מהמסגרת, והמסמך ממילא מוצג כאן
+  if (meta.sourceUrl && !meta.sourceUrl.includes('/storage/v1/object/')) parsed.sourceUrl = meta.sourceUrl;
+  const html = generatePsakDinHtml(parsed);
+  // כתובת מקור ארוכה גולשת מהמסגרת ויוצרת גלילה לרוחב; שבירת שורה בלבד, בלי שינוי בעיצוב
+  return html.replace(
+    '.paragraph {',
+    '.details-table a, .psakim-link a { word-break: break-all; }\n        .paragraph {',
+  );
 }
