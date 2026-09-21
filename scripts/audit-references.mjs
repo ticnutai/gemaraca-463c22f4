@@ -225,7 +225,12 @@ async function worker() {
       }
 
       const before = ntext.slice(Math.max(0, at - 40), at);
-      if (isPerekHalacha(raw) || (!citesDaf(raw) && precededByYerushalmi(before))) {
+      // ציטוט שקודם לו רמב״ם/שו״ע/טור ואין בו שם מסכת — אינו דף בבבלי.
+      // "מהרמב״ם (אישות טז׳, ז׳-ט׳)" נשמר כנידה ט״ז ע״א.
+      const otherCorpus = /רמב"ם|שו"ע|שולחן ערוך|טור|רמ"א/.test(before.slice(-28))
+        && !TRACTATE_NAMES.some((t) => raw.includes(t))
+        && !ABBREVIATIONS.some((a) => raw.includes(normQuotes(a)));
+      if (isPerekHalacha(raw) || otherCorpus || (!citesDaf(raw) && precededByYerushalmi(before))) {
         key('non-bavli');
         findings.push({ ...r, why: 'non-bavli', raw, before });
         continue;
