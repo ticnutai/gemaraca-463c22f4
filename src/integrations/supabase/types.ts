@@ -924,6 +924,8 @@ export type Database = {
           source: string
           tractate: string
           user_id: string | null
+          validated_at: string | null
+          validated_by: string | null
           validation_status: string
         }
         Insert: {
@@ -942,6 +944,8 @@ export type Database = {
           source?: string
           tractate: string
           user_id?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
           validation_status?: string
         }
         Update: {
@@ -960,6 +964,8 @@ export type Database = {
           source?: string
           tractate?: string
           user_id?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
           validation_status?: string
         }
         Relationships: [
