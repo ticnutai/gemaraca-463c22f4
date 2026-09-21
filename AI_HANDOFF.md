@@ -33,19 +33,59 @@ Claude Code. בתמצית: הממשק עברית ו-RTL; מיגרציות append
 | `talmud_references` | האינדקס המתקדם: הפניה מפסק דין לדף גמרא | `tractate`, `daf`, `amud`, `normalized`, `corrected_normalized`, `source` (`ai` / regex), `confidence_score`, `validation_status` |
 | `gemara_pages` | טקסט הגמרא לפי `sugya_id` (למשל `berakhot_2a`) | `gemara_text`, `full_text`, `daf_yomi`, `masechet` |
 | `sugya_psak_links` | קישור ידני/AI בין סוגיה לפסק | `relevance_score`, `connection_explanation` |
+| `psak_sources` | מראי מקומות שאינם בבלי: שולחן ערוך (סימן/סעיף), רמב"ם וירושלמי (פרק/הלכה) — 3,394 שורות | `corpus`, `book`, `section`, `subsection`, `display`, `raw_path` |
+| `psak_source_registry` | מרשם המקורות: שם לתצוגה, אתר, רישוי, נוסח ייחוס, והאם להציג | `key`, `label`, `license`, `attribution`, `enabled` |
+| `masechtot_daf_limits` | מספר הדפים בכל מסכת; טריגר `guard_daf_range` חוסם מראה מקום לדף שאינו קיים | `name`, `max_daf` |
+| `data_backups`, `data_restores` | היסטוריית גיבויים ושחזורים; העותקים עצמם ב-Storage בדלי `system-backups` | `kind`, `status`, `tables`, `total_rows`, `storage_path` |
 | `user_books`, `pdf_annotations`, `text_annotations`, `user_preferences`, `shas_download_progress` | מצב משתמש, הערות, התקדמות הורדת ש"ס | |
 
 ### קורפוסים — **רוב המסמכים אינם PDF**
 
-| מקור | כמות | פורמט במסד |
-| --- | --- | --- |
-| `all-psakim/` בריפו | ~2,000 | HTML |
-| gov.il — בתי הדין הרבניים | ~3,400 | **טקסט** שחולץ מקובצי docx (`scripts/download-govil-psakim.mjs`), `source_url` מצביע לדף ב-gov.il |
-| psakim.org, ארץ חמדה, daat.ac.il, bdmz.co.il | משתנה | סקריפטים ייעודיים ב-`scripts/` |
-| סריקות ש"ס | PDF | Supabase Storage (`shas-pdf-pages`) |
+לכל פסק יש `source_key` שמציין מאיזה מקור הובא, וכל מקור רשום ב-`psak_source_registry`
+עם הרישוי והייחוס שלו. המספרים למטה הם מצב המסד ב-21.9.2026 (סה"כ 6,989 פסקים):
+
+| `source_key` | מקור | כמות | פורמט במסד | מוריד |
+| --- | --- | --- | --- | --- |
+| `psakim.org` | אתר פסקים | 3,053 | HTML (גם `all-psakim/` בריפו) | `download-all-psakim.mjs` |
+| `gov.il` | בתי הדין הרבניים | 1,984 | **טקסט** שחולץ מ-docx, `source_url` לדף ב-gov.il | `download-govil-psakim.mjs` |
+| `upload` | קבצים שהועלו למערכת | 1,879 | מעורב | — |
+| `bdmz` | בית דין לממונות משפט צדק | 27 | HTML, כולל הערות שוליים | `download-bdmz-psakim.mjs` |
+| `bethdin` | בית הדין דאמריקה | 25 | PDF עם שכבת טקסט, חולץ עם pdfjs-dist | `download-bethdin-psakim.mjs` |
+| `other` | אחר | 21 | מעורב | — |
+| — | סריקות ש"ס | PDF | Supabase Storage (`shas-pdf-pages`) | `upload-shas-pdfs.mjs` |
+
+מוריד חדש כותב קאש JSON ל-`scripts/data/<מקור>/`, ו-`scripts/import-cached-psakim.mjs`
+מייבא ממנו: מדלג על כפילויות לפי כותרת ולפי `content_print`, מעצב בתבנית הבית, שומר את
+הטקסט המקורי ב-`original_text`, ורושם את המקור במרשם. daat.ac.il בהורדה (כ-2,600 פסקים).
 
 **זו העובדה החשובה ביותר להבנת ארכיטקטורת הצפיין:** PDF הוא מיעוט. הצפיין הוא מעטפת אחת
 עם שני מנועי הצגה בפנים — EmbedPDF ל-PDF, ותבנית הבית ל-HTML/טקסט.
+
+---
+
+### שלוש מערכות נתונים שחייבים להכיר
+
+**א. גיבוי ושחזור** — `src/lib/backup/engine.ts` + `src/components/backup/`, נפתח מתפריט
+ההגדרות למנהל בלבד. גיבוי לענן או לקובץ ZIP, בחירה לפי נושאים, שחזור בשלושה מצבים
+(הוספת חסרים / עדכון / החלפה מלאה), גיבוי ביטחון אוטומטי לפני שחזור, בדיקת תקינות,
+וגיבוי אוטומטי שבועי שרץ מהדפדפן של המנהל (`AutoBackupRunner`). צד השרת במיגרציה
+`20260918120000`: הפונקציות `backup_catalog`, `backup_export_rows`, `backup_restore_rows`,
+`backup_delete_missing`. **המסד אינו מאפשר `session_replication_role`**, ולכן השחזור
+מכבה טריגרים לכל אצווה ונופל לשורה-שורה כשיש הפרת מפתח זר.
+
+**ב. מראי מקומות** — שלוש שכבות, לפי סדר אמינות יורד:
+1. `source='site-index'` — תיוג ידני של psakim.org שיובא כמו שהוא (`import-source-index-refs.mjs`
+   לבבלי, `import-other-sources.mjs` לשאר). **מדויק, בלי AI.**
+2. `source='regex'` — 12 תבניות ב-`supabase/functions/extract-references`.
+3. `source='ai'` — Gemini, על אותו טקסט.
+   כל מראה מקום נבדק מול `masechtot_daf_limits`; מה שמחוץ לטווח מסומן `incorrect`.
+   **חשוב:** ה-Edge Function שולח ל-AI 6,000 תווים בלבד, ולכן הקריאה מתבצעת לפי קטעים
+   חופפים — `src/lib/references/extractAll.ts` באפליקציה, `scripts/reanalyze-refs.mjs` בסקריפט.
+   מצב נוכחי: 20,997 מראי מקומות תקפים ל-4,066 פסקים.
+
+**ג. כפילויות** — `content_print` הוא md5 של 2,000 האותיות הראשונות (בלי תגיות וסימני פיסוק).
+`scripts/dedupe-psakim.mjs` מאחד כפילויות: מעביר את כל מה שמקושר לפסק הנשמר ואז מוחק.
+כל ייבוא חדש בודק מול טביעות האצבע הקיימות, וכך נחסמו 712 פסקים כפולים בייבוא מ-gov.il.
 
 ---
 
@@ -152,13 +192,20 @@ Claude Code. בתמצית: הממשק עברית ו-RTL; מיגרציות append
    כדאי לבדוק מה מצב שכבת הטקסט בסריקות, ולשקול OCR (יש כבר `src/lib/ocrService.ts`).
 2. **`setSelection()`** — יכולת חדשה ב-2.15: בחירת טקסט תכנותית. זה הבסיס ל"סמן בפסק את
    המקור שמצוטט מהגמרא" — הקישור בין שני חצאי האפליקציה.
-3. **`.env.supabase` עוקב ב-git** ומכיל פלט של Vercel CLI כולל `VERCEL_OIDC_TOKEN`
-   (קצר-מועד, אך עדיין). להוציא מהמעקב ולהוסיף ל-`.gitignore`.
+3. ~~**`.env.supabase` עוקב ב-git**~~ — **טופל ב-21.9**: הוצא מהמעקב ונוסף ל-`.gitignore`.
+   נשאר פתוח: **הסיסמה של משתמש האדמין עדיין בהיסטוריית הגיט** (הוצאה מהקוד ב-`8aef679`
+   לקובץ `.env.migrations.local` שאינו נכנס לגיט). הריפו ציבורי — צריך להחליף סיסמה.
 4. **חוב lint** — מאות ממצאים קיימים מראש, רובם `no-explicit-any`. לנקות בהדרגה, קובץ-קובץ.
-5. **קבצי זבל בריפו:** `-w` (פלט curl בטעות) ו-`vite.config.ts.timestamp-*.mjs`.
+5. ~~**קבצי זבל בריפו**~~ — **טופל ב-21.9**: `-w` ו-`vite.config.ts.timestamp-*.mjs` נמחקו,
+   והתבנית נוספה ל-`.gitignore`.
 6. **`EMBEDPDF_SYSTEM_GUIDE.md` מתיישן** — יש בו באנר שמסמן מה כבר לא נכון, אבל בסופו של
    דבר כדאי לכתוב אותו מחדש או למחוק חלקים.
 7. **`user_preferences.viewer_mode`** נשארה במסד אך האפליקציה לא קוראת אותה יותר.
+8. **הכלל "צפיין אחד" לא הושלם בכל האפליקציה** — `PdfViewerTab` (נקרא מ-`Index.tsx`)
+   ו-`RichTextViewer` (ב-`GemaraTextPanel` וב-`ModernExamplesPanel`) עדיין חיים לצד הצפיין
+   המאוחד. לפסקי דין יש צפיין אחד; לשאר התכנים עוד לא.
+9. **לחבר את מראי המקומות לצפיין** — ל-`talmud_references` יש `context_snippet`, ובגרסה 2.15
+   יש `setSelection()`. יחד אפשר לסמן בפסק את הציטוט עצמו כשנכנסים אליו מדף הגמרא.
 
 ### מה **לא** הייתי עושה
 

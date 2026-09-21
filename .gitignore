@@ -62,3 +62,15 @@ scripts/data/govil_index.json
 scripts/data/reanalyze-state.json
 scripts/data/style-preview/
 scripts/data/_query.sql
+
+# פלט של Vercel CLI — מכיל אסימונים, לא נכנס לגיט
+.env.supabase
+
+# קבצים זמניים של Vite
+vite.config.ts.timestamp-*.mjs
+scripts/data/bdmz/
+scripts/data/bdmz_index.json
+scripts/data/bethdin/
+scripts/data/bethdin_index.json
+scripts/data/daat/
+scripts/data/daat_index.json
