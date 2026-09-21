@@ -48,4 +48,30 @@ describe("regex reference extraction", () => {
     expect(refs[0]).toMatchObject({ tractate: "כתובות", daf: "84", amud: "b", source: "regex" });
     expect(refs[0].normalized).toBe("כתובות פ״ד:");
   });
+
+  it("does not file a Yerushalmi citation as a Bavli daf", () => {
+    // "ירושלמי ברכות פ״א ה״א" הוא פרק והלכה בירושלמי; במסד הוא נשמר כברכות ב׳ ע״א
+    expect(found('וכדאיתא כך היא גאולתן של ישראל קמעא קמעא (ירושלמי ברכות פ"א ה"א) ואולי')).toEqual([]);
+    expect(found("והכי איתא בירושלמי (סוכה ג,א) מה בין לולב לשופר")).toEqual([]);
+    expect(found("כמשמעות הירושלמי מגילה ג,ב")).toEqual([]);
+    // הבבלי שלפני אזכור הירושלמי נשאר
+    expect(found('גמרא בקידושין כט ע"א, ירושלמי בקידושין פ"א')).toEqual(["קידושין 29a"]);
+  });
+
+  it("does not file a chapter-and-mishna citation as a daf", () => {
+    expect(found('איתא בבבא קמא (פ"י מ"א): אין פורטין')).toEqual([]);
+    expect(found('במשנה בנדרים (פ"ה מ"ו) המודר הנייה')).toEqual([]);
+  });
+
+  it("reads a citation written as tractate and number with gershayim", () => {
+    // הצורה הרבנית הנפוצה, בלי "דף" ובלי ציון עמוד
+    expect(found('חדא מסנהדרין כ"ט בבני חמוה דמר עוקבא')).toEqual(["סנהדרין 29"]);
+    expect(found('וכמבואר במשנה יבמות ק"כ ומובא להלכה')).toEqual(["יבמות 120"]);
+    // ראשי תיבות רגילים אינם מספרים
+    expect(found('נעשה ע"י רבנים הרגילים בקידושין ע"י שליח')).toEqual([]);
+  });
+
+  it("reads a citation that opens with a bracket", () => {
+    expect(found("בהתאם למה שנאמר בקידושין (דף ל\"א עמ' א') ששניהם שווים")).toEqual(["קידושין 31a"]);
+  });
 });

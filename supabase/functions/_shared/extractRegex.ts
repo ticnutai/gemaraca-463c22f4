@@ -90,6 +90,24 @@ interface RawMatch {
   hasAmud: boolean;
 }
 
+/**
+ * ציטוט שאינו תלמוד בבלי, למרות ששם המסכת זהה.
+ *
+ * "ירושלמי ברכות פ״א ה״א" הוא פרק והלכה בתלמוד הירושלמי, לא דף בבלי, ובכל זאת
+ * נשמר במסד כ"ברכות ב׳ ע״א" — הדף הראשון של המסכת. הבדיקה מסתכלת רק על מה
+ * שלפני הציטוט, ורק על המילה הקרובה ביותר: ב"גמרא בקידושין כט ע״א, ירושלמי..."
+ * הציטוט הוא בבלי, והירושלמי בא אחריו.
+ */
+export function precededByYerushalmi(before: string): boolean {
+  const marks = [...before.matchAll(/ירושלמי|ירוש['׳]|בבלי|גמרא|גמ['׳]/g)];
+  if (!marks.length) return false;
+  return /ירוש/.test(marks[marks.length - 1][0]);
+}
+
+/** "פ״י מ״א" או "פ״ה ה״ו" — פרק ומשנה או פרק והלכה, ולעולם לא דף */
+export const isPerekHalacha = (raw: string) =>
+  /פ['׳"״][א-ת]['׳"״]?\s*[,;]?\s*[המ]['׳"״][א-ת]/.test(raw);
+
 export function extractWithRegex(text: string): Reference[] {
   const rawMatches: RawMatch[] = [];
   // Track all occurrences (including duplicates) for frequency counting
@@ -105,26 +123,29 @@ export function extractWithRegex(text: string): Reference[] {
   // בלי הגרשיים הפנימיים "כתובות דף פ״ד ע״ב" נקרא כדף פ׳ בלבד, והעמוד אבד.
   const dafToken = `[א-תך-ץ]+(?:['׳"״][א-תך-ץ]+)*['׳"״]?|\\d+`;
 
+  // המפריד בין שם המסכת למספר: רווח, או סוגריים שנפתחים
+  const sep = `(?:\\s+|\\s*[(\[]\\s*)`;
+
   // strict: התבנית כוללת "דף" או סימון עמוד מפורש, ולכן המספר בה הוא ציטוט.
   // loose: אין סימון כזה, והמספר הוא כל מילה עברית שבאה אחרי שם מסכת — שם
   // נדרשת גם צורת מספר (ספרות, אות בודדת, או גרש/גרשיים), אחרת "קידושין בטלים."
   // היה נקרא כדף צ״א.
   const patterns: { re: RegExp; loose?: boolean }[] = [
     // מסכת/מס' X דף Y עמוד א/ב
-    { re: new RegExp(`(?:מסכת|מס['׳"])\\s*(${tractatePattern})\\s+דף\\s+(${dafToken})\\s+עמוד\\s+([אב])['׳]?`, "g") },
+    { re: new RegExp(`(?:מסכת|מס['׳"])\\s*(${tractatePattern})${sep}דף\\s+(${dafToken})${sep}עמוד\\s+([אב])['׳]?`, "g") },
     // X דף Y ע"א / ע"ב (double-quote, smart-quote, gershayim, geresh variants)
-    { re: new RegExp(`(${tractatePattern})\\s+דף\\s+(${dafToken})\\s+ע[""״'׳]([אב])`, "g") },
+    { re: new RegExp(`(${tractatePattern})${sep}דף\\s+(${dafToken})${sep}ע[""״'׳]([אב])`, "g") },
     // X דף Y עמוד א/ב
-    { re: new RegExp(`(${tractatePattern})\\s+דף\\s+(${dafToken})\\s+עמוד\\s+([אב])['׳]?`, "g") },
+    { re: new RegExp(`(${tractatePattern})${sep}דף\\s+(${dafToken})${sep}עמוד\\s+([אב])['׳]?`, "g") },
     // X דף Y עמ' א/ב (abbreviated עמוד)
-    { re: new RegExp(`(${tractatePattern})\\s+דף\\s+(${dafToken})\\s+עמ['׳]\\s*([אב])['׳]?`, "g") },
+    { re: new RegExp(`(${tractatePattern})${sep}דף\\s+(${dafToken})${sep}עמ['׳]\\s*([אב])['׳]?`, "g") },
     // X דף Y צד א/ב ("side" notation)
-    { re: new RegExp(`(${tractatePattern})\\s+דף\\s+(${dafToken})\\s+צד\\s+([אב])['׳]?`, "g") },
+    { re: new RegExp(`(${tractatePattern})${sep}דף\\s+(${dafToken})${sep}צד\\s+([אב])['׳]?`, "g") },
     // X דף Y (no amud) — negative lookahead excludes all amud indicators
     // וגבול אחרי המספר, כדי שלא ייקרא רק החלק הראשון שלו: "דף פ״ד" אינו דף פ׳
-    { re: new RegExp(`(${tractatePattern})\\s+דף\\s+(${dafToken})(?![א-תך-ץ'׳"״])(?!\\s*(?:עמוד|עמ['׳]|ע[""״'׳]|צד))`, "g") },
+    { re: new RegExp(`(${tractatePattern})${sep}דף\\s+(${dafToken})(?![א-תך-ץ'׳"״])(?!\\s*(?:עמוד|עמ['׳]|ע[""״'׳]|צד))`, "g") },
     // X Y. / Y: (dot=amud a, colon=amud b)
-    { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s*([.:])`, "g"), loose: true },
+    { re: new RegExp(`(${tractatePattern})${sep}(${dafToken})\\s*([.:])`, "g"), loose: true },
     // X Y ע"א/ע"ב (without דף)
     { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s+ע[""״'׳]([אב])`, "g") },
     // X Y עמ' א/ב (without דף, abbreviated)
@@ -135,6 +156,10 @@ export function extractWithRegex(text: string): Reference[] {
     { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s*,\\s*([אב])`, "g"), loose: true },
     // X Y א/ב (direct letter, no Hebrew letter after)
     { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s+([אב])(?![א-ת])`, "g"), loose: true },
+    // X Y״Z — מסכת ומספר עם גרשיים בלי ציון עמוד ("מסנהדרין כ״ט"), הצורה
+    // הנפוצה בכתיבה רבנית. הגרשיים נדרשים כדי שמילה רגילה לא תיקרא כדף,
+    // והמבט קדימה מונע כפילות עם התבניות שיש בהן ציון עמוד.
+    { re: new RegExp(`(${tractatePattern})${sep}([א-תך-ץ]+['׳"״][א-תך-ץ]+)(?![א-תך-ץ'׳"״])(?!\\s*(?:עמוד|עמ['׳]|ע[""״'׳]|צד|[.:,]))`, "g"), loose: true },
   ];
 
   /**
@@ -162,6 +187,10 @@ export function extractWithRegex(text: string): Reference[] {
       if (!TRACTATES.includes(tractName)) continue;
 
       if (loose && !plausibleDafToken(dafRaw)) continue;
+
+      // ציטוט ירושלמי או פרק-והלכה אינו דף בבבלי, גם כששם המסכת זהה
+      if (precededByYerushalmi(text.slice(Math.max(0, m.index - 40), m.index))) continue;
+      if (isPerekHalacha(text.slice(m.index, m.index + m[0].length + 12))) continue;
 
       const dafNum = parseHebrewNumber(dafRaw);
       // טווח הדפים של המסכת עצמה, לא תקרה גלובלית: "תמורה קט״ו" אינו קיים
