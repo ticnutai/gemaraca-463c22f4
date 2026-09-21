@@ -79,16 +79,60 @@ export const GEMATRIA: Record<string, number> = {
   "ך": 20, "ם": 40, "ן": 50, "ף": 80, "ץ": 90,
 };
 
+/**
+ * ממיר מספר עברי למספר, בבדיקה קפדנית של צורת המספר.
+ *
+ * מספר עברי תקני נכתב בסדר יורד — מאות, עשרות, יחידות — כל מחלקה פעם אחת,
+ * חוץ מהמאות שחוזרות (ת״ק=500 ... תת״ק=900), ו-15/16 שנכתבים ט״ו/ט״ז.
+ * כל תו שנשאר בלי שימוש פוסל את המחרוזת.
+ *
+ * זה מה שמבדיל ציטוט ("פ״ד" → 84) ממילה רגילה שבאה אחרי שם מסכת:
+ * "עליה", "אכיפה", "הדיינים", "שהד" — כולן מחזירות null ולא נספרות כדף.
+ * לפני התיקון הן הומרו בסכימה פשוטה של אותיות והכניסו למסד דפים שאינם קיימים.
+ */
 export function parseHebrewNumber(s: string): number | null {
-  const clean = s.replace(/['"״׳]/g, "").trim();
+  const clean = s.replace(/['"״׳’”]/g, "").trim();
   if (!clean) return null;
-  const num = parseInt(clean, 10);
-  if (!isNaN(num)) return num;
+
+  if (/^\d+$/.test(clean)) return parseInt(clean, 10);
+
+  const ones: Record<string, number> = {
+    "א": 1, "ב": 2, "ג": 3, "ד": 4, "ה": 5,
+    "ו": 6, "ז": 7, "ח": 8, "ט": 9,
+  };
+  const tens: Record<string, number> = {
+    "י": 10, "כ": 20, "ל": 30, "מ": 40, "נ": 50,
+    "ס": 60, "ע": 70, "פ": 80, "צ": 90,
+  };
+  const hundreds: Record<string, number> = { "ק": 100, "ר": 200, "ש": 300, "ת": 400 };
+
   let total = 0;
-  for (const ch of clean) {
-    const val = GEMATRIA[ch];
-    if (val) total += val;
-    else return null;
+  let i = 0;
+  let prevHundred = Infinity;
+
+  while (i < clean.length && hundreds[clean[i]] !== undefined) {
+    const v = hundreds[clean[i]];
+    if (v > prevHundred) return null;
+    total += v;
+    prevHundred = v;
+    i++;
+    if (total > 900) return null;
   }
+
+  const rest = clean.slice(i);
+  if (rest === "טו") return total + 15;
+  if (rest === "טז") return total + 16;
+
+  if (i < clean.length && tens[clean[i]] !== undefined) { total += tens[clean[i]]; i++; }
+  if (i < clean.length && ones[clean[i]] !== undefined) { total += ones[clean[i]]; i++; }
+
+  if (i !== clean.length) return null;
   return total > 0 ? total : null;
+}
+
+/** האם המספר יכול להיות דף במסכת הזו: הגמרא מתחילה בדף ב׳ ולכל מסכת דף אחרון */
+export function isDafInRange(tractate: string, daf: number): boolean {
+  const m = MASECHTOT.find((x) => x.name === tractate);
+  if (!m) return false;
+  return Number.isFinite(daf) && daf >= 2 && daf <= m.maxDaf;
 }

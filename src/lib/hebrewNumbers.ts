@@ -56,58 +56,65 @@ export function toHebrewNumeral(num: number): string {
 }
 
 /**
- * Converts Hebrew numeral back to a number
- * Examples: "ב" -> 2, "כג" -> 23, "ט״ו" -> 15
+ * ממיר מספר עברי למספר, בבדיקה קפדנית של צורת המספר.
+ *
+ * מספר עברי תקני נכתב לפי סדר יורד: מאות, עשרות, יחידות, כל מחלקה פעם אחת
+ * (חוץ מהמאות שחוזרות: ת"ק=500 ... תת"ק=900), ו-15/16 נכתבים ט"ו/ט"ז.
+ * מילה רגילה כמעט תמיד מפרה את הסדר הזה, ולכן הבדיקה מבדילה בין ציטוט
+ * ("פ״ד" → 84) ובין מילה שנמצאת אחרי שם מסכת ("עליה", "אכיפה", "הדיינים").
+ *
+ * כל תו שנשאר בלי שימוש פוסל את המחרוזת: "שהד" אינו 309 אלא לא־מספר.
+ *
+ * Examples: "ב" -> 2, "כג" -> 23, "ט״ו" -> 15, "עליה" -> null
  */
 export function fromHebrewNumeral(hebrewNum: string): number | null {
   if (!hebrewNum) return null;
 
-  // Remove gershayim and geresh
-  const cleaned = hebrewNum.replace(/[״׳]/g, '').trim();
-  
-  const onesMap: Record<string, number> = {
+  // הסרת גרשיים וגרש — הם סימני מספר, לא חלק מהערך
+  const s = hebrewNum.replace(/[״׳"'’”]/g, '').trim();
+  if (!s) return null;
+
+  const ones: Record<string, number> = {
     'א': 1, 'ב': 2, 'ג': 3, 'ד': 4, 'ה': 5,
-    'ו': 6, 'ז': 7, 'ח': 8, 'ט': 9
+    'ו': 6, 'ז': 7, 'ח': 8, 'ט': 9,
   };
-  
-  const tensMap: Record<string, number> = {
+  const tens: Record<string, number> = {
     'י': 10, 'כ': 20, 'ל': 30, 'מ': 40, 'נ': 50,
-    'ס': 60, 'ע': 70, 'פ': 80, 'צ': 90
+    'ס': 60, 'ע': 70, 'פ': 80, 'צ': 90,
   };
-  
-  const hundredsMap: Record<string, number> = {
-    'ק': 100, 'ר': 200, 'ש': 300, 'ת': 400,
-    'תק': 500, 'תר': 600, 'תש': 700, 'תת': 800, 'תתק': 900
-  };
+  const hundreds: Record<string, number> = { 'ק': 100, 'ר': 200, 'ש': 300, 'ת': 400 };
 
   let total = 0;
   let i = 0;
 
-  // Check for hundreds
-  if (cleaned.length >= 2) {
-    const twoChar = cleaned.substring(i, i + 2);
-    if (hundredsMap[twoChar]) {
-      total += hundredsMap[twoChar];
-      i += 2;
-    } else if (hundredsMap[cleaned[i]]) {
-      total += hundredsMap[cleaned[i]];
-      i++;
-    }
-  } else if (hundredsMap[cleaned[i]]) {
-    total += hundredsMap[cleaned[i]];
+  // מאות, בסדר לא עולה: ת״ק=500, תת״ק=900
+  let prevHundred = Infinity;
+  while (i < s.length && hundreds[s[i]] !== undefined) {
+    const v = hundreds[s[i]];
+    if (v > prevHundred) return null;
+    total += v;
+    prevHundred = v;
+    i++;
+    if (total > 900) return null;
+  }
+
+  // ט״ו ו-ט״ז נכתבים כך כדי לא לכתוב שם השם
+  const rest = s.slice(i);
+  if (rest === 'טו') return total + 15;
+  if (rest === 'טז') return total + 16;
+
+  if (i < s.length && tens[s[i]] !== undefined) {
+    total += tens[s[i]];
     i++;
   }
 
-  // Check for tens
-  if (i < cleaned.length && tensMap[cleaned[i]]) {
-    total += tensMap[cleaned[i]];
+  if (i < s.length && ones[s[i]] !== undefined) {
+    total += ones[s[i]];
     i++;
   }
 
-  // Check for ones
-  if (i < cleaned.length && onesMap[cleaned[i]]) {
-    total += onesMap[cleaned[i]];
-  }
+  // תו שנשאר מסמן שזו מילה ולא מספר
+  if (i !== s.length) return null;
 
   return total > 0 ? total : null;
 }

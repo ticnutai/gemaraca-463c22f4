@@ -51,6 +51,27 @@ const heByEn = new Map(MASECHTOT.flatMap((m) => [[m.en.toLowerCase(), m.he], [m.
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** מספר עברי בצורה תקנית: מאות יורדות, עשרה אחת, יחידה אחת, בלי תו עודף */
+function parseHebrewLetters(tok) {
+  const s = String(tok).replace(/['"״׳]/g, '');
+  if (!s) return null;
+  const ones = { 'א': 1, 'ב': 2, 'ג': 3, 'ד': 4, 'ה': 5, 'ו': 6, 'ז': 7, 'ח': 8, 'ט': 9 };
+  const tens = { 'י': 10, 'כ': 20, 'ל': 30, 'מ': 40, 'נ': 50, 'ס': 60, 'ע': 70, 'פ': 80, 'צ': 90 };
+  const hundreds = { 'ק': 100, 'ר': 200, 'ש': 300, 'ת': 400 };
+  let total = 0, i = 0, prev = Infinity;
+  while (i < s.length && hundreds[s[i]] !== undefined) {
+    if (hundreds[s[i]] > prev) return null;
+    total += hundreds[s[i]]; prev = hundreds[s[i]]; i++;
+    if (total > 900) return null;
+  }
+  const rest = s.slice(i);
+  if (rest === 'טו') return total + 15;
+  if (rest === 'טז') return total + 16;
+  if (i < s.length && tens[s[i]] !== undefined) { total += tens[s[i]]; i++; }
+  if (i < s.length && ones[s[i]] !== undefined) { total += ones[s[i]]; i++; }
+  return i === s.length && total > 0 ? total : null;
+}
+
 /** שולח טקסט למנוע הזיהוי ומחכה לתשובה (הממשק אסינכרוני: שליחה ואז איסוף) */
 async function findRefs(body) {
   const post = await fetch('https://www.sefaria.org/api/find-refs', {
@@ -95,13 +116,35 @@ for (let from = 0; ; from += 1000) {
   if (data.length < 1000) break;
 }
 
+/**
+ * האם raw_reference עקבי עם הדף שנשמר אצלנו.
+ *
+ * חלק מה-raw שנשמרו משובשים: ה-AI החזיר "בבא בתרא דף ב" בעוד שהדף שחילץ הוא
+ * פ״ד. שליחת מחרוזת כזאת לספריא מחזירה "Bava Batra 2", וזו סתירה מדומה —
+ * היא סותרת את המחרוזת המשובשת ולא את ההפניה. לכן נבדקות רק מחרוזות שהמספר
+ * בהן תואם את הדף השמור, והשאר מדווחות בנפרד כטעונות תיקון raw.
+ */
+const rawMatchesDaf = (raw, row) => {
+  const nums = [...String(raw).matchAll(/\d+/g)].map((m) => Number(m[0]));
+  if (nums.length) return nums.includes(Number(row.daf));
+  // מספר עברי: נבדק לפי כל רצף אותיות שיכול להיות מספר
+  const daf = Number(row.daf);
+  for (const m of String(raw).matchAll(/[א-ת]['"״׳]?[א-ת]?['"״׳]?[א-ת]?/g)) {
+    if (parseHebrewLetters(m[0]) === daf) return true;
+  }
+  return false;
+};
+
 const byRaw = new Map();
+let rawMismatch = 0;
 for (const r of refs) {
   const raw = String(r.raw_reference || '').replace(/\s+/g, ' ').trim();
   if (raw.length < 4 || raw.length > 60) continue;      // מחרוזות ארוכות הן ציטוט טקסט, לא הפניה
+  if (!rawMatchesDaf(raw, r)) { rawMismatch++; continue; }
   if (!byRaw.has(raw)) byRaw.set(raw, []);
   byRaw.get(raw).push(r);
 }
+if (rawMismatch) console.log(`דולגו ${rawMismatch} שורות שבהן raw_reference אינו תואם את הדף השמור`);
 const uniques = [...byRaw.keys()].slice(0, LIMIT === Infinity ? undefined : LIMIT);
 console.log(`מראי מקומות ממתינים: ${refs.length} | מחרוזות ייחודיות לבדיקה: ${uniques.length}`);
 
@@ -177,11 +220,14 @@ if (examples.unresolved.length) console.log('לא זוהו: ' + examples.unresol
 console.log(`\nסיכום: אושרו ${confirmed} | נסתרו ${contradicted} | לא זוהו ${unresolved} | אצוות שנכשלו ${failedBatches}`);
 if (DRY) { console.log('(--dry-run: לא נכתב כלום)'); process.exit(0); }
 
+// האימות נרשם בעמודות שלו. אין לגעת ב-source: הוא מתעד מי חילץ את ההפניה
+// (regex / ai / site-index), ודריסה שלו מוחקת את הייחוס הזה לתמיד.
+const validatedAt = new Date().toISOString();
 for (const [status, ids] of [['correct', updates.correct], ['incorrect', updates.incorrect]]) {
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200);
     const { error } = await sb.from('talmud_references')
-      .update({ validation_status: status, source: 'sefaria-verified' })
+      .update({ validation_status: status, validated_by: 'sefaria', validated_at: validatedAt })
       .in('id', chunk);
     if (error) { console.error('❌', error.message); break; }
   }

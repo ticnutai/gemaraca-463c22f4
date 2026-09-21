@@ -115,9 +115,9 @@ const masechetPatterns = MASECHTOT.map(m => {
   
   return {
     masechet: m,
-    // Enhanced pattern to capture daf and amud more accurately
+    // אסימון הדף כולל גרשיים פנימיים ("פ״ד"), אחרת נקרא רק חלקו הראשון (פ׳)
     pattern: new RegExp(
-      `(${nameVariations})\\s*(?:דף\\s*)?([א-ת]{1,3}|\\d{1,3})\\s*(?:,\\s*)?(?:ע[\\"\\'״׳]?([אב])|עמוד\\s*([אב])|([אב])(?:\\s|$|,|\\.))?`,
+      `(${nameVariations})\\s*(?:דף\\s*)?([א-ת]{1,3}(?:[\\"'״׳][א-ת]{1,2})?|\\d{1,3})\\s*(?:,\\s*)?(?:ע[\\"\\'״׳]?([אב])|עמוד\\s*([אב])|([אב])(?:\\s|$|,|\\.))?`,
       'gi'
     ),
     simplePattern: new RegExp(`(${m.hebrewName}|מסכת\\s*${m.hebrewName})`, 'gi')
