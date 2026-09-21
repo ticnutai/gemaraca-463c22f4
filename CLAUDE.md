@@ -69,6 +69,7 @@ Never commit a service-role key.
 
 ## Longer guides
 
+`AI_HANDOFF.md` (**start here** — project state, architecture, recommendations, in Hebrew),
 `CHANGELOG.md` (what changed and why, newest first — read this before the older guides),
 `DEPLOYMENT_WORKFLOW_GUIDE.md`, `EMBEDPDF_SYSTEM_GUIDE.md` (partly outdated, see its banner),
 `MIGRATION_RUNNER_GUIDE.md`, `PSAKIM_SOURCES_PLAN.md`, `LOVABLE_FILE_DELETION_PROBLEM.md`, and
