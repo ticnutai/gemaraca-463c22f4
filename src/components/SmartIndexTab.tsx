@@ -43,8 +43,7 @@ import {
   AnalysisResult,
   DetectedSource,
 } from "@/lib/textAnalyzer";
-import PsakDinViewDialog from "./PsakDinViewDialog";
-import { getViewerPreference, setViewerPreference, type ViewerMode } from "./ViewerPreferenceDialog";
+import { useDocumentViewer } from "./DocumentViewerProvider";
 import { toHebrewNumeral } from "@/lib/hebrewNumbers";
 import { MASECHTOT } from "@/lib/masechtotData";
 
@@ -70,7 +69,6 @@ const SmartIndexTab = () => {
   const [selectedMasechet, setSelectedMasechet] = useState<string | null>(null);
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [selectedPsak, setSelectedPsak] = useState<any | null>(null);
-  const [preferredViewer, setPreferredViewer] = useState<ViewerMode>(() => getViewerPreference() ?? "dialog");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [summaryDialog, setSummaryDialog] = useState<{ open: boolean; title: string; summary: string | null; loading: boolean }>({ open: false, title: '', summary: null, loading: false });
   
@@ -585,6 +583,7 @@ const SmartIndexTab = () => {
   };
 
   // Load psak for dialog
+  const { open: openDocument } = useDocumentViewer();
   const handlePsakClick = async (id: string) => {
     trackRecentPsak(id);
     const { data } = await supabase
@@ -595,26 +594,7 @@ const SmartIndexTab = () => {
     
     if (!data) return;
 
-    const sourceUrl = data.source_url as string | null;
-    if (preferredViewer === "newwindow" && sourceUrl) {
-      window.open(sourceUrl, "_blank");
-      return;
-    }
-
-    if (preferredViewer === "embedpdf") {
-      navigate(`/embedpdf-viewer?${sourceUrl ? `url=${encodeURIComponent(sourceUrl)}&` : ''}psakId=${data.id}`);
-      return;
-    }
-
-    setSelectedPsak(data);
-    setDialogOpen(true);
-  };
-
-  const toggleViewerPreference = () => {
-    const next: ViewerMode = preferredViewer === "dialog" ? "embedpdf" : "dialog";
-    setPreferredViewer(next);
-    setViewerPreference(next);
-    toast({ title: `ברירת מחדל: ${next === "dialog" ? "צפיין רגיל" : "EmbedPDF"}` });
+    openDocument({ id: data.id, title: data.title, source_url: data.source_url as string | null });
   };
 
   // Render source badge with link
@@ -881,10 +861,6 @@ const SmartIndexTab = () => {
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  <Button variant="outline" size="sm" className="gap-2 flex-row-reverse" onClick={toggleViewerPreference}>
-                    <ArrowUpDown className="w-4 h-4" />
-                    {preferredViewer === "dialog" ? "צפיין רגיל" : "EmbedPDF"}
-                  </Button>
 
                   {/* Filter Dropdown */}
                   <DropdownMenu>
@@ -1620,11 +1596,6 @@ const SmartIndexTab = () => {
         )}
 
         {/* Psak Dialog */}
-        <PsakDinViewDialog
-          psak={selectedPsak}
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-        />
 
         {/* Case Summary Dialog */}
         <Dialog open={summaryDialog.open} onOpenChange={(open) => setSummaryDialog(prev => ({ ...prev, open }))}>

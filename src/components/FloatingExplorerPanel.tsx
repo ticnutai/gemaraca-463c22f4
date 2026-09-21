@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { useQuery } from "@tanstack/react-query";
-import PsakDinViewDialog from "./PsakDinViewDialog";
+import { useDocumentViewer } from "./DocumentViewerProvider";
 import FileTypeBadge from "./FileTypeBadge";
 import SummaryToggle from "./SummaryToggle";
 import { useExplorerPanelStore, PanelLayout } from "@/stores/explorerPanelStore";
@@ -67,6 +67,7 @@ const MIN_H = 300;
 // ─── Component ──────────────────────────────────────────
 export default function FloatingExplorerPanel() {
   const navigate = useNavigate();
+  const { open: openDocument } = useDocumentViewer();
   const { setSelectedMasechet, setActiveTab } = useAppContext();
   const { isOpen, toggle, close, layout, setLayout, syncFromCloud } = useExplorerPanelStore();
 
@@ -78,8 +79,6 @@ export default function FloatingExplorerPanel() {
   const [selectedAmud, setSelectedAmud] = useState<"a" | "b" | null>(null);
   const [dafPsakim, setDafPsakim] = useState<DafPsak[]>([]);
   const [loadingPsakim, setLoadingPsakim] = useState(false);
-  const [viewPsak, setViewPsak] = useState<DafPsak | null>(null);
-  const [viewPsakOpen, setViewPsakOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [showShasInfo, setShowShasInfo] = useState(false);
 
@@ -863,7 +862,7 @@ export default function FloatingExplorerPanel() {
                       {dafPsakim.map((psak) => (
                         <button
                           key={psak.id}
-                          onClick={() => { setViewPsak(psak); setViewPsakOpen(true); }}
+                          onClick={() => openDocument({ id: psak.id, title: psak.title, source_url: (psak as any).source_url })}
                           className="w-full text-right p-3 rounded-xl border border-border hover:shadow-md hover:border-primary/30 hover:bg-primary/5 active:scale-[0.99] transition-all bg-card"
                         >
                           <div className="flex items-start gap-2">
@@ -941,11 +940,6 @@ export default function FloatingExplorerPanel() {
         )}
       </div>
 
-      <PsakDinViewDialog
-        psak={viewPsak}
-        open={viewPsakOpen}
-        onOpenChange={setViewPsakOpen}
-      />
     </>
   );
 }

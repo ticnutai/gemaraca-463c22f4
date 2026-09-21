@@ -8,6 +8,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import AppLayout from "./components/AppLayout";
 import { AppContextProvider } from "./contexts/AppContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { DocumentViewerProvider } from "./components/DocumentViewerProvider";
 
 // Lazy-loaded route pages (code splitting)
 const Index = lazy(() => import("./pages/Index"));
@@ -47,6 +48,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AppContextProvider>
+            <DocumentViewerProvider>
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
             <SettingsButton />
             <GlobalUploadProgress />
@@ -65,6 +67,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
+            </DocumentViewerProvider>
           </AppContextProvider>
         </BrowserRouter>
       </TooltipProvider>

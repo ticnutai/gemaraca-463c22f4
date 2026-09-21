@@ -28,12 +28,16 @@ import { toast } from "sonner";
 import { usePDFAnnotations, type PDFAnnotation } from "@/hooks/usePDFAnnotations";
 import { useUserBooks, type UserBook } from "@/hooks/useUserBooks";
 import { supabase } from "@/integrations/supabase/client";
-import PsakDinViewDialog from "@/components/PsakDinViewDialog";
+import { baseViewerConfig, applyIosPixelRatioCap, registerHebrewLocale } from "@/lib/embedPdfConfig";
+import { PSAK_UPDATED_MESSAGE } from "@/components/DocumentViewerProvider";
 import { TEMPLATES, generateFromTemplate } from "@/lib/psakDinTemplates";
 import { parsePsakDinText } from "@/lib/psakDinParser";
 import { toHouseStyledHtml, type PsakMeta } from "@/lib/psakDinHtmlTemplate";
 import { PDFViewer as EmbedPDFViewer, type PDFViewerConfig } from "@embedpdf/react-pdf-viewer";
 
+
+// iOS Safari reloads the tab when large scans render at 3x; cap it for this page (see embedPdfConfig).
+applyIosPixelRatioCap();
 
 // ─── Constants ───────────────────────────────────────────────
 
@@ -592,7 +596,6 @@ export default function EmbedPdfViewerPage() {
   const [compareManualUrl, setCompareManualUrl] = useState("");
   const [targetPane, setTargetPane] = useState<"left" | "right">("left");
   const [viewerFullscreen, setViewerFullscreen] = useState(false);
-  const [regularViewerOpen, setRegularViewerOpen] = useState(false);
 
   const viewerStateStorageKey = useMemo(() => {
     const fallbackKey = externalBookIdParam || searchParams.get("url") || "default";
@@ -1242,12 +1245,8 @@ export default function EmbedPdfViewerPage() {
     if (leftContentType !== 'pdf' || !leftSourceUrl) return null;
     return {
       src: leftSourceUrl,
+      ...baseViewerConfig(),
       theme: PDF_THEME_CONFIGS[pdfTheme].themeConfig,
-      annotations: {
-        colorPresets: ["#FFEB3B", "#81C784", "#64B5F6", "#FF8A65", "#CE93D8", "#F48FB1", "#FCA5A5"],
-      },
-      search: { showAllResults: true },
-      zoom: { defaultZoomLevel: "fit-width" as any },
     };
   }, [leftSourceUrl, leftContentType, pdfTheme]);
 
@@ -1255,12 +1254,8 @@ export default function EmbedPdfViewerPage() {
     if (rightContentType !== 'pdf' || !rightSourceUrl) return null;
     return {
       src: rightSourceUrl,
+      ...baseViewerConfig(),
       theme: PDF_THEME_CONFIGS[pdfTheme].themeConfig,
-      annotations: {
-        colorPresets: ["#FFEB3B", "#81C784", "#64B5F6", "#FF8A65", "#CE93D8", "#F48FB1", "#FCA5A5"],
-      },
-      search: { showAllResults: true },
-      zoom: { defaultZoomLevel: "fit-width" as any },
     };
   }, [rightSourceUrl, rightContentType, pdfTheme]);
 
@@ -1352,6 +1347,18 @@ export default function EmbedPdfViewerPage() {
     } else if (format === "txt") {
       downloadBlob(text || "אין תוכן טקסט", `${safeName}.txt`, "text/plain;charset=utf-8");
       toast.success("הקובץ הורד כטקסט");
+    } else if (format === "docx" && psakData?.title) {
+      // A real .docx for rulings (docx library); other documents get Word-flavoured HTML below.
+      import("@/lib/docxGenerator").then(async ({ generateDocx }) => {
+        const blob = await generateDocx({
+          title: psakData.title, court: psakData.court || "", year: psakData.year || 0,
+          case_number: psakData.case_number, full_text: text || psakData.full_text, summary: psakData.summary,
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a"); a.href = url; a.download = `${safeName}.docx`; a.click();
+        URL.revokeObjectURL(url);
+        toast.success("הקובץ הורד כ-Word (docx)");
+      }).catch(() => toast.error("שגיאה ביצירת קובץ Word"));
     } else if (format === "docx") {
       const bodyContent = beautifyIframeRef.current?.contentDocument?.body?.innerHTML || htmlEmbedIframeRef.current?.contentDocument?.body?.innerHTML || text.replace(/\n/g, "<br>");
       const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>${title}</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]--><style>body{font-family:'David Libre',David,serif;font-size:14pt;line-height:1.8;direction:rtl;padding:2cm;}h1,h2,h3{color:#0B1F5B;}</style></head><body dir="rtl">${bodyContent}</body></html>`;
@@ -1366,7 +1373,7 @@ export default function EmbedPdfViewerPage() {
       if (win) { win.document.write(content); win.document.close(); setTimeout(() => win.print(), 500); }
       toast.info("שמור כ-PDF דרך חלון ההדפסה");
     }
-  }, [getCurrentContent]);
+  }, [getCurrentContent, psakData]);
 
   const handleDownloadAndSaveToCloud = useCallback(async (format: "html" | "txt") => {
     const { html, text, title } = getCurrentContent();
@@ -1417,6 +1424,7 @@ export default function EmbedPdfViewerPage() {
       setPsakData((prev: any) => ({ ...prev, title: editPsakForm.title, court: editPsakForm.court, year: editPsakForm.year, case_number: editPsakForm.case_number || null, summary: editPsakForm.summary, tags: tagArray }));
       setEditPsakOpen(false);
       toast.success("פרטי פסק הדין עודכנו בהצלחה");
+      if (window.parent !== window) window.parent.postMessage({ type: PSAK_UPDATED_MESSAGE, id: psakData.id }, window.location.origin);
     } catch {
       toast.error("שגיאה בעדכון פרטי פסק הדין");
     } finally {
@@ -2371,10 +2379,7 @@ export default function EmbedPdfViewerPage() {
             size="icon"
             variant="ghost"
             className="h-8 w-8 text-[#0B1F5B] hover:bg-[#D4AF37]/10"
-            onClick={() => {
-              setActiveTab("psak-din");
-              navigate('/');
-            }}
+            onClick={() => { if (window.history.length > 1) navigate(-1); else navigate('/'); }}
             title="חזור"
           >
             <ArrowRight className="h-4 w-4" />
@@ -2565,15 +2570,6 @@ export default function EmbedPdfViewerPage() {
             </a>
           )}
 
-          {psakData && (
-            <button
-              onClick={() => setRegularViewerOpen(true)}
-              className="p-1.5 rounded-md text-[#0B1F5B]/50 hover:text-[#0B1F5B] hover:bg-[#D4AF37]/10"
-              title="החלף לצפיין רגיל"
-            >
-              <Eye className="h-4 w-4" />
-            </button>
-          )}
         </div>
       </header>
 
@@ -4033,6 +4029,7 @@ export default function EmbedPdfViewerPage() {
                       <EmbedPDFViewer
                         key={`${leftSourceUrl}-${pdfTheme}`}
                         config={leftPdfConfig}
+                        onReady={registerHebrewLocale}
                         className="absolute inset-0 w-full h-full"
                         style={{ width: '100%', height: '100%' }}
                       />
@@ -4332,6 +4329,7 @@ export default function EmbedPdfViewerPage() {
                     <EmbedPDFViewer
                       key={`${rightSourceUrl}-${pdfTheme}`}
                       config={rightPdfConfig}
+                        onReady={registerHebrewLocale}
                       className="absolute inset-0 w-full h-full"
                       style={{ width: '100%', height: '100%' }}
                     />
@@ -4384,22 +4382,6 @@ export default function EmbedPdfViewerPage() {
           canEdit={selectionPopup.source === 'html-embed' ? htmlEditMode : selectionPopup.source === 'beautify'}
         />
       )}
-
-      <PsakDinViewDialog
-        psak={psakData ? {
-          id: psakData.id,
-          title: psakData.title,
-          court: psakData.court,
-          year: psakData.year,
-          case_number: psakData.case_number,
-          summary: psakData.summary,
-          full_text: psakData.full_text,
-          source_url: psakData.source_url,
-          tags: psakData.tags,
-        } : null}
-        open={regularViewerOpen}
-        onOpenChange={setRegularViewerOpen}
-      />
 
       {/* ═══ EDIT PSAK DIN DIALOG ═══ */}
       <Dialog open={editPsakOpen} onOpenChange={setEditPsakOpen}>

@@ -8,12 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Scale, ExternalLink, Plus, ArrowUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { PsakDinRow } from "@/types/psakDin";
-import PsakDinViewDialog from "./PsakDinViewDialog";
 import PsakDinEditDialog from "./PsakDinEditDialog";
 import PsakDinActions from "./PsakDinActions";
 import FileTypeBadge from "./FileTypeBadge";
 import SummaryToggle from "./SummaryToggle";
-import { getViewerPreference, setViewerPreference, type ViewerMode } from "./ViewerPreferenceDialog";
+import { useDocumentViewer } from "./DocumentViewerProvider";
 
 interface RelatedPsakimSidebarProps {
   sugyaId: string;
@@ -119,40 +118,11 @@ const RelatedPsakimSidebar = ({ sugyaId }: RelatedPsakimSidebarProps) => {
     }
   }, [sugyaId]);
 
+  const { open: openDocument } = useDocumentViewer();
   const handlePsakClick = useCallback((psak: typeof psakim[number]) => {
     trackRecentPsak(psak.id);
-    const sourceUrl = (psak as any).source_url as string | undefined;
-    const preferred = getViewerPreference() ?? "dialog";
-
-    if (preferred === "newwindow" && sourceUrl) {
-      window.open(sourceUrl, "_blank");
-      return;
-    }
-
-    if (preferred === "embedpdf") {
-      navigate(`/embedpdf-viewer?${sourceUrl ? `url=${encodeURIComponent(sourceUrl)}&` : ''}psakId=${psak.id}`);
-      return;
-    }
-
-    setSelectedPsak(psak);
-    setDialogOpen(true);
-  }, [navigate]);
-
-  const handleSwitchViewer = useCallback((psak: typeof psakim[number], e: React.MouseEvent) => {
-    e.stopPropagation();
-    const current = getViewerPreference() ?? "embedpdf";
-    const next: ViewerMode = current === "dialog" ? "embedpdf" : "dialog";
-    setViewerPreference(next);
-
-    const sourceUrl = (psak as any).source_url as string | undefined;
-    if (next === "embedpdf") {
-      navigate(`/embedpdf-viewer?${sourceUrl ? `url=${encodeURIComponent(sourceUrl)}&` : ''}psakId=${psak.id}`);
-      return;
-    }
-
-    setSelectedPsak(psak);
-    setDialogOpen(true);
-  }, [navigate]);
+    openDocument({ id: psak.id, title: (psak as any).title ?? (psak as any).psakei_din?.title, source_url: (psak as any).source_url as string | undefined });
+  }, [openDocument]);
 
   const handleEditPsak = useCallback(async (psakId: string) => {
     const { data } = await supabase
@@ -246,15 +216,6 @@ const RelatedPsakimSidebar = ({ sugyaId }: RelatedPsakimSidebarProps) => {
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7"
-                        title="החלף צפיין"
-                        onClick={(e) => handleSwitchViewer(link.psakei_din as any, e)}
-                      >
-                        <ArrowUpDown className="w-3.5 h-3.5" />
-                      </Button>
                       {link.psakei_din?.id && (
                         <PsakDinActions
                           psakId={link.psakei_din.id}
@@ -287,11 +248,6 @@ const RelatedPsakimSidebar = ({ sugyaId }: RelatedPsakimSidebarProps) => {
         </CardContent>
       </Card>
 
-      <PsakDinViewDialog
-        psak={selectedPsak}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
 
       <PsakDinEditDialog
         psak={editingPsak}

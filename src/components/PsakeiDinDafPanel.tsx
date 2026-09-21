@@ -49,22 +49,17 @@ import {
   Loader2,
   Monitor,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import FileTypeBadge from "./FileTypeBadge";
 import SummaryToggle from "./SummaryToggle";
-import { getViewerPreference, setViewerPreference, clearViewerPreference } from "./ViewerPreferenceDialog";
+import { useDocumentViewer } from "./DocumentViewerProvider";
 import { toast } from "sonner";
 
-const PsakDinViewDialog = lazy(() => import("@/components/PsakDinViewDialog"));
 const GemaraTextPanel = lazy(() => import("@/components/GemaraTextPanel"));
-const EmbeddedDocViewer = lazy(() => import("@/components/EmbeddedDocViewer"));
 
-const PSAK_VIEWER_DEFAULT_KEY = 'psak-din-default-viewer';
 const PSAK_VIEW_MODE_KEY = 'psak-din-view-mode';
 const LAZY_BATCH = 12;
 
-type ViewerType = 'regular' | 'embedded-pdf' | 'embedpdf' | 'embedpdf-page' | 'google-viewer';
 type ViewMode = "list" | "grid" | "compact" | "table" | "magazine" | "timeline" | "kanban" | "split";
 type SortField = "title" | "year" | "court" | "references" | "relevance";
 type SortDir = "asc" | "desc";
@@ -105,20 +100,6 @@ export default function PsakeiDinDafPanel({
     () => (localStorage.getItem(PSAK_VIEW_MODE_KEY) as ViewMode) || "list"
   );
   const [selectedPsak, setSelectedPsak] = useState<DafPsak | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewerSelectOpen, setViewerSelectOpen] = useState(false);
-  const [embeddedPdfOpen, setEmbeddedPdfOpen] = useState(false);
-  const [defaultViewer, setDefaultViewer] = useState<ViewerType | null>(
-    () => {
-      const unified = getViewerPreference();
-      if (unified === "dialog") return "regular";
-      if (unified === "embedpdf" || unified === "newwindow") {
-        const exact = localStorage.getItem(PSAK_VIEWER_DEFAULT_KEY) as ViewerType | null;
-        return exact ?? (unified === "embedpdf" ? "embedpdf-page" : null);
-      }
-      return localStorage.getItem(PSAK_VIEWER_DEFAULT_KEY) as ViewerType | null;
-    }
-  );
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   // Search & Filter
@@ -206,69 +187,11 @@ export default function PsakeiDinDafPanel({
     setExpandedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }, []);
 
-  const navigate = useNavigate();
-
+  const { open: openDocument } = useDocumentViewer();
   const handleOpenPsak = useCallback((psak: DafPsak) => {
     setSelectedPsak(psak);
-    // If a default viewer is saved, open directly with it
-    const unified = getViewerPreference();
-    if (unified === "newwindow" && psak.source_url) {
-      window.open(psak.source_url, "_blank");
-      return;
-    }
-    const saved = unified === "dialog"
-      ? "regular"
-      : unified === "embedpdf"
-      ? (localStorage.getItem(PSAK_VIEWER_DEFAULT_KEY) as ViewerType | null) ?? "embedpdf-page"
-      : (localStorage.getItem(PSAK_VIEWER_DEFAULT_KEY) as ViewerType | null);
-    if (saved) {
-      if (saved === 'embedpdf-page') {
-        navigate(`/embedpdf-viewer?${psak.source_url ? `url=${encodeURIComponent(psak.source_url)}&` : ''}psakId=${psak.id}`);
-      } else if (saved === 'regular') {
-        setDialogOpen(true);
-      } else {
-        setEmbeddedPdfOpen(true);
-      }
-    } else {
-      // Default to EmbedPDF page when no preference is saved
-      navigate(`/embedpdf-viewer?${psak.source_url ? `url=${encodeURIComponent(psak.source_url)}&` : ''}psakId=${psak.id}`);
-    }
-  }, [navigate]);
-
-  const openViewer = useCallback((type: ViewerType) => {
-    setViewerSelectOpen(false);
-    if (type === 'embedpdf-page') {
-      navigate(`/embedpdf-viewer?${selectedPsak?.source_url ? `url=${encodeURIComponent(selectedPsak.source_url)}&` : ''}psakId=${selectedPsak?.id}`);
-    } else if (type === 'regular') {
-      setDialogOpen(true);
-    } else {
-      setEmbeddedPdfOpen(true);
-    }
-  }, [navigate, selectedPsak]);
-
-  const VIEWER_LABELS: Record<ViewerType, string> = {
-    'regular': 'צפיין רגיל',
-    'embedded-pdf': 'PDF מוטמע',
-    'embedpdf': 'EmbedPDF (pdfium)',
-    'embedpdf-page': 'EmbedPDF (דף מלא)',
-    'google-viewer': 'Google Viewer',
-  };
-
-  const setAsDefault = useCallback((type: ViewerType) => {
-    if (type === "regular") setViewerPreference("dialog");
-    else if (type === "embedpdf-page" || type === "embedpdf" || type === "embedded-pdf") setViewerPreference("embedpdf");
-    localStorage.setItem(PSAK_VIEWER_DEFAULT_KEY, type);
-    setDefaultViewer(type);
-    toast.success(`${type === 'regular' ? 'צפיין רגיל' : type === 'embedded-pdf' ? 'PDF מוטמע' : type === 'embedpdf' ? 'EmbedPDF (pdfium)' : 'EmbedPDF (דף מלא)'} נקבע כברירת מחדל`);
-    openViewer(type);
-  }, [openViewer]);
-
-  const clearDefault = useCallback(() => {
-    localStorage.removeItem(PSAK_VIEWER_DEFAULT_KEY);
-    clearViewerPreference();
-    setDefaultViewer(null);
-    toast.info('ברירת מחדל אופסה');
-  }, []);
+    openDocument({ id: psak.id, title: psak.title, source_url: psak.source_url });
+  }, [openDocument]);
 
   const handleSelectForSplit = useCallback((psak: DafPsak) => {
     setSelectedPsak(psak);
@@ -320,13 +243,6 @@ export default function PsakeiDinDafPanel({
             <h3 className="text-lg font-bold">
               פסקי דין ({processedPsakim.length}{processedPsakim.length !== psakim.length ? ` / ${psakim.length}` : ""})
             </h3>
-            {defaultViewer && (
-              <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1 text-muted-foreground" onClick={clearDefault}>
-                  <RotateCcw className="w-2.5 h-2.5" />{defaultViewer === 'regular' ? 'צפיין רגיל' : defaultViewer === 'google-viewer' ? 'Google' : defaultViewer === 'embedpdf' ? 'EmbedPDF' : 'PDF'}
-                </Button>
-              </TooltipTrigger><TooltipContent>לחץ לניקוי ברירת מחדל</TooltipContent></Tooltip></TooltipProvider>
-            )}
           </div>
 
           {/* View mode icons */}
@@ -618,68 +534,6 @@ export default function PsakeiDinDafPanel({
         </div>
       )}
 
-      {/* ─── Dialogs ─── */}
-      <Suspense fallback={null}>
-        <PsakDinViewDialog
-          psak={selectedPsak ? {
-            id: selectedPsak.id, title: selectedPsak.title, court: selectedPsak.court,
-            year: selectedPsak.year, case_number: selectedPsak.case_number, summary: selectedPsak.summary,
-            full_text: selectedPsak.full_text, source_url: selectedPsak.source_url, tags: selectedPsak.tags,
-          } : null}
-          open={dialogOpen} onOpenChange={setDialogOpen}
-        />
-      </Suspense>
-
-      <Dialog open={viewerSelectOpen} onOpenChange={setViewerSelectOpen}>
-        <DialogContent className="max-w-xl" dir="rtl">
-          <DialogHeader><DialogTitle className="text-center text-lg">בחר צפיין לפסק הדין</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
-            <ViewerOption type="regular" icon={FileText} iconColor="text-primary" label="צפיין רגיל" desc="תצוגה עם עריכה, חיפוש ועיצוב טקסט" defaultViewer={defaultViewer} onOpen={openViewer} onSetDefault={setAsDefault} onClearDefault={clearDefault} />
-            <ViewerOption type="embedded-pdf" icon={Monitor} iconColor="text-blue-600" label="PDF מוטמע" desc="מנוע PDF מובנה בדפדפן — מהיר ואמין" defaultViewer={defaultViewer} onOpen={openViewer} onSetDefault={setAsDefault} onClearDefault={clearDefault} />
-            <ViewerOption type="embedpdf" icon={FileText} iconColor="text-purple-600" label="EmbedPDF (pdfium)" desc="מנוע pdfium מתקדם — רינדור מקורי, זום, חיפוש, הדפסה" defaultViewer={defaultViewer} onOpen={openViewer} onSetDefault={setAsDefault} onClearDefault={clearDefault} />
-            <ViewerOption type="embedpdf-page" icon={BookOpen} iconColor="text-amber-600" label="EmbedPDF (דף מלא)" desc="צפיין מלא עם הערות, סימניות, ערכת נושא, ייצוא ועוד" defaultViewer={defaultViewer} onOpen={openViewer} onSetDefault={setAsDefault} onClearDefault={clearDefault} />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={embeddedPdfOpen} onOpenChange={setEmbeddedPdfOpen}>
-        <DialogContent className="max-w-[97vw] w-[97vw] h-[93vh] flex flex-col p-0 gap-0" dir="rtl">
-          <DialogHeader className="sr-only"><DialogTitle>צפייה במסמך — {selectedPsak?.title}</DialogTitle></DialogHeader>
-          {selectedPsak?.source_url ? (
-            <Suspense fallback={
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            }>
-              <EmbeddedDocViewer
-                url={selectedPsak.source_url}
-                title={selectedPsak.title}
-                psakData={{
-                  id: selectedPsak.id,
-                  title: selectedPsak.title,
-                  court: selectedPsak.court,
-                  year: selectedPsak.year,
-                  caseNumber: selectedPsak.case_number,
-                  summary: selectedPsak.summary,
-                  fullText: selectedPsak.full_text,
-                  tags: selectedPsak.tags,
-                }}
-                onClose={() => setEmbeddedPdfOpen(false)}
-                onSwitchToRegular={() => { setEmbeddedPdfOpen(false); setDialogOpen(true); }}
-                initialStrategy={defaultViewer === 'embedpdf' ? 'embedpdf' : defaultViewer === 'embedded-pdf' ? 'direct' : 'embedpdf'}
-              />
-            </Suspense>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <Globe className="w-16 h-16 mb-4 opacity-30" />
-              <p className="font-medium">אין כתובת מקור לפסק דין זה</p>
-              <Button variant="outline" size="sm" className="mt-4 gap-1.5" onClick={() => { setEmbeddedPdfOpen(false); setDialogOpen(true); }}>
-                <FileText className="w-3.5 h-3.5" /> פתח בצפיין הרגיל
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -687,39 +541,6 @@ export default function PsakeiDinDafPanel({
 /* ═══════════════════════════════════════════════════════════
    Sub-components
    ═══════════════════════════════════════════════════════════ */
-
-function ViewerOption({ type, icon: Icon, iconColor, label, desc, defaultViewer, onOpen, onSetDefault, onClearDefault }: {
-  type: ViewerType; icon: React.ElementType; iconColor: string; label: string; desc: string;
-  defaultViewer: ViewerType | null; onOpen: (t: ViewerType) => void; onSetDefault: (t: ViewerType) => void; onClearDefault: () => void;
-}) {
-  const isDefault = defaultViewer === type;
-  return (
-    <div className="relative group">
-      <button onClick={() => onOpen(type)} className={cn(
-        "w-full flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all hover:shadow-md hover:border-primary/50",
-        isDefault ? "border-primary bg-primary/5" : "border-border"
-      )}>
-        <Icon className={cn("w-10 h-10", iconColor)} />
-        <span className="font-semibold text-sm">{label}</span>
-        <span className="text-[11px] text-muted-foreground leading-snug">{desc}</span>
-      </button>
-      <TooltipProvider><Tooltip><TooltipTrigger asChild>
-        <button onClick={(e) => { e.stopPropagation(); onSetDefault(type); }}
-          className={cn("absolute top-2 left-2 p-1 rounded-full transition-colors", isDefault ? "text-amber-500" : "text-muted-foreground/40 hover:text-amber-500")}>
-          <Star className={cn("w-4 h-4", isDefault && "fill-current")} />
-        </button>
-      </TooltipTrigger><TooltipContent side="top">{isDefault ? 'ברירת מחדל נוכחית' : 'קבע כברירת מחדל'}</TooltipContent></Tooltip></TooltipProvider>
-      {isDefault && (
-        <TooltipProvider><Tooltip><TooltipTrigger asChild>
-          <button onClick={(e) => { e.stopPropagation(); onClearDefault(); }}
-            className="absolute top-2 right-2 p-1 rounded-full text-muted-foreground/40 hover:text-red-500 transition-colors">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </TooltipTrigger><TooltipContent side="top">נקה ברירת מחדל</TooltipContent></Tooltip></TooltipProvider>
-      )}
-    </div>
-  );
-}
 
 /* ─── List Card ─── */
 function PsakCardList({ psak, expanded, onToggle, onOpen, onSplitView }: {

@@ -1,7 +1,9 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import type { ViewerMode } from '@/components/ViewerPreferenceDialog';
+
+/** Kept for the user_preferences.viewer_mode column; the app now has a single viewer. */
+type ViewerMode = 'dialog' | 'embedpdf' | 'newwindow';
 
 const VIEWER_PREF_KEY = 'psak_din_viewer_preference';
 const RECENT_PSAKIM_KEY = 'recently_viewed_psakim';
