@@ -79,4 +79,27 @@ describe("regex reference extraction", () => {
     // "מהירושלמי סוטה פ״ה ה״א והביאו תוספות בסוטה דף כ״ז ע״ב" — שניים שונים
     expect(found('ושכן עולה מהירושלמי סוטה פ"ה ה"א והביאו תוספות בסוטה דף כ"ז ע"ב ד"ה כשם')).toEqual(["סוטה 27b"]);
   });
+
+  it("does not read a Hebrew date as tractate Avodah Zarah", () => {
+    // "תשע״ז" מסתיים ב-ע״ז, ו-(10.5.17) הוא תאריך ולא דף ועמוד
+    expect(found('בדיון שנערך בי"ד באייר תשע"ז (10.5.17) נידון גם עניין שינוי שם')).toEqual([]);
+    expect(found('ניתן ביום כ"ח באדר התשע"ז (26.3.17)')).toEqual([]);
+    // ע"ז כמסכת, עם תחילית, עדיין נקרא
+    expect(found('ועיין בע"ז דף ח עמוד א')).toEqual(["עבודה זרה 8a"]);
+  });
+
+  it("does not read the daf number as a tractate abbreviation", () => {
+    // "ב״מ דף ע״ז ע״א" — ע״ז כאן הוא הדף 77, לא מסכת עבודה זרה
+    expect(found('גרסינן בב"מ דף ע"ז ע"א: אמר רבא')).toEqual(["בבא מציעא 77a"]);
+  });
+
+  it("reads a citation written with the tractate after the daf", () => {
+    expect(found("שיעור מקיף על דף יט עמוד א במסכת בבא בתרא, המנתח את הסוגיות")).toEqual(["בבא בתרא 19a"]);
+    expect(found("דף כג עמוד ב במסכת שבת")).toEqual(["שבת 23b"]);
+  });
+
+  it("reads a citation that opens with a bracket and has no דף", () => {
+    expect(found('ועיין בכתובות (פח ע"ב) ובמה שכתב שם')).toEqual(["כתובות 88b"]);
+    expect(found("וכן בכתובות (סג:) שם")).toEqual(["כתובות 63b"]);
+  });
 });

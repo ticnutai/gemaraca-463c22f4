@@ -15,11 +15,18 @@
  *   out-of-range      הדף אינו קיים במסכת
  *   ok                הציטוט נמצא ותואם
  *
- * שימוש:
- *   node scripts/audit-references.mjs [--limit 500] [--sample 0.1] [--csv out.csv]
+ * מה ש---fix מוחק: out-of-range, non-bavli, not-in-psak ו-daf-mismatch — ארבע
+ * מחלקות שהטקסט עצמו מפריך. `reworded` נשאר: הציטוט נוסח אחרת אך המסכת בפסק,
+ * ולרוב הוא הגיע מפסק כפול שאוחד.
+ *
+ * שימוש (מומלץ להתחיל בקטן ולבדוק ידנית):
+ *   node scripts/audit-references.mjs --limit 10 --verbose
+ *   node scripts/audit-references.mjs --limit 100
+ *   node scripts/audit-references.mjs --csv audit.csv
+ *   node scripts/audit-references.mjs --limit 100 --fix
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
@@ -33,6 +40,7 @@ const LIMIT = num('--limit', Infinity);      // כמה פסקים לבדוק
 const SAMPLE = num('--sample', 1);           // חלק מהפסקים, 0..1
 const CSV = str('--csv');
 const VERBOSE = args.includes('--verbose');   // מדפיס כל הפניה עם ההקשר שלה, לבדיקה ידנית
+const FIX = args.includes('--fix');           // מוחק את מה שהביקורת הוכיחה כשגוי
 
 const env = Object.fromEntries(
   readFileSync(join(ROOT, '.env'), 'utf8').split(/\r?\n/)
@@ -101,20 +109,32 @@ const ABBREV_OF = {
  */
 function readCitation(raw) {
   let s = normQuotes(raw);
-  for (const n of TRACTATE_NAMES) s = s.split(n).join(' ');
-  for (const a of ABBREVIATIONS) s = s.split(normQuotes(a)).join(' ');
+  // שם המסכת מוסר רק מתחילת הציטוט. הסרה בכל מקום מוחקת גם מספרים שנראים
+  // כראשי תיבות: ע״ז הוא גם הדף 77, ואז "כתובות (דף ע״ז ע״א" נשאר בלי מספר.
+  for (const n of [...TRACTATE_NAMES, ...ABBREVIATIONS.map(normQuotes)]) {
+    const at = s.indexOf(n);
+    if (at >= 0 && at <= 2) { s = s.slice(0, at) + ' ' + s.slice(at + n.length); break; }
+  }
+  // סימון העמוד: הסימן האחרון קובע, כי ב"דף ע״ב ע״א" הראשון הוא המספר (72)
+  // והשני הוא העמוד. הגרשיים נדרשים, אחרת "דף עב" היה נקרא כעמוד ב.
+  const amudMarks = [...s.matchAll(/ע"\s*([אב])(?![א-ת])|עמוד\s*([אב])(?![א-ת])|עמ'\s*([אב])(?![א-ת])|צד\s*([אב])(?![א-ת])|,\s*([אב])(?![א-ת])|([.:])\s*$/g)];
   let amud = null;
-  // ע״א/ע״ב עם גרשיים, "עמוד א", "עמ׳ ב", פסיק ואות, או נקודה/נקודתיים בסוף.
-  // בלי דרישת הגרשיים, "דף עב" (=72) היה נקרא כעמוד ב.
-  if (/(?:^|[\s,.(\[])ע"\s*א(?![א-ת])|עמוד\s*א(?![א-ת])|עמ'\s*א(?![א-ת])|,\s*א(?![א-ת])|\.\s*$/.test(s)) amud = 'a';
-  if (/(?:^|[\s,.(\[])ע"\s*ב(?![א-ת])|עמוד\s*ב(?![א-ת])|עמ'\s*ב(?![א-ת])|,\s*ב(?![א-ת])|:\s*$/.test(s)) amud = 'b';
-  // מסירים את מילות הסימון, ומה שנשאר הוא המספר
-  s = s.replace(/מסכת|מס'|דף|עמוד|עמ'|צד|ע"[אב]|מדפי|הרי"ף|ד"ה|בבלי/g, ' ')
+  if (amudMarks.length) {
+    const last = amudMarks[amudMarks.length - 1];
+    const mark = last.slice(1).find(Boolean);
+    amud = mark === 'א' || mark === '.' ? 'a' : mark === 'ב' || mark === ':' ? 'b' : null;
+  }
+  // מסירים את מילות הסימון. "צד" מוסר רק כשהוא סימן עמוד ("צד א"), כי צ״ד
+  // הוא גם דף 94 — בלי הסייג הזה כל ציטוט לדף צד נפסל.
+  s = s.replace(/מסכת|מס'|דף|עמוד|עמ'|צד\s+[אב](?![א-ת])|ע"[אב]|מדפי|הרי"ף|ד"ה|בבלי/g, ' ')
        .replace(/[,;:().\[\]]/g, ' ');
+  // ע״א/ע״ב יכולים להיות גם המספר עצמו (71 / 72) ולא רק סימון עמוד:
+  // "קידושין (ע״א א)" הוא דף ע״א עמוד א
+  const amudAsNumber = [...normQuotes(raw).matchAll(/ע"([אב])/g)].map((m) => (m[1] === 'א' ? 71 : 72));
   const digits = [...s.matchAll(/\d+/g)].map((m) => Number(m[0]));
   const letters = [...s.matchAll(/[א-ת]+(?:"[א-ת]+)?'?/g)]
     .map((m) => strictHebrew(m[0])).filter((n) => n !== null);
-  return { numbers: [...digits, ...letters], amud };
+  return { numbers: [...digits, ...letters, ...amudAsNumber], amud };
 }
 
 const psakim = [];
@@ -129,7 +149,7 @@ const refsByPsak = new Map();
 let totalRefs = 0;
 for (let from = 0; ; from += 1000) {
   const { data, error } = await sb.from('talmud_references')
-    .select('id,psak_din_id,tractate,daf,amud,raw_reference,source,validation_status')
+    .select('id,psak_din_id,tractate,daf,amud,raw_reference,normalized,source,validation_status,validated_by')
     .range(from, from + 999);
   if (error) { console.error('❌', error.message); process.exit(1); }
   for (const r of data) {
@@ -145,7 +165,7 @@ if (SAMPLE < 1) targets = targets.filter(() => Math.random() < SAMPLE);
 targets = targets.slice(0, LIMIT === Infinity ? undefined : LIMIT);
 console.log(`פסקים עם מראי מקומות: ${refsByPsak.size} | סה"כ הפניות: ${totalRefs} | נבדקים: ${targets.length} פסקים`);
 
-const counts = { ok: 0, 'reworded': 0, 'not-in-psak': 0, 'daf-mismatch': 0, 'amud-mismatch': 0, 'non-bavli': 0, 'out-of-range': 0 };
+const counts = { ok: 0, 'reworded': 0, 'not-in-psak': 0, 'daf-mismatch': 0, 'amud-mismatch': 0, 'non-bavli': 0, 'out-of-range': 0, 'date-not-daf': 0, 'abbrev-in-word': 0 };
 const findings = [];
 const bySource = {};
 let checked = 0;
@@ -190,12 +210,30 @@ async function worker() {
         if (findings.length < 8000) findings.push({ ...r, why, raw });
         continue;
       }
+      // "תשע״ז (10.5.17)" — תאריך עברי שסופו ע״ז, ומספר שהוא חלק מתאריך לועזי
+      const after = ntext.slice(at + raw.length, at + raw.length + 2);
+      if (/^\d/.test(after) || /\(\s*\d+\s*\.$/.test(raw)) {
+        key('date-not-daf');
+        findings.push({ ...r, why: 'date-not-daf', raw });
+        continue;
+      }
+      // ראשי תיבות שנבלעו בתוך מילה ארוכה יותר
+      if (/^[א-ת]["'][א-ת]/.test(raw) && /[א-ת]/.test(ntext[at - 1] || '') && /[א-ת]/.test(ntext[at - 2] || '')) {
+        key('abbrev-in-word');
+        findings.push({ ...r, why: 'abbrev-in-word', raw, before: ntext.slice(Math.max(0, at - 25), at) });
+        continue;
+      }
+
       const before = ntext.slice(Math.max(0, at - 40), at);
       if (isPerekHalacha(raw) || (!citesDaf(raw) && precededByYerushalmi(before))) {
         key('non-bavli');
         findings.push({ ...r, why: 'non-bavli', raw, before });
         continue;
       }
+      // ציטוט לפי עימוד הרי״ף כבר הומר לדף הבבלי, ולכן המספר שבציטוט אינו
+      // אמור להתאים למה ששמור — ההמרה עצמה היא המקור
+      if (r.validated_by === 'rif-pagination') { key('ok'); continue; }
+
       const cited = readCitation(raw);
       if (cited.numbers.length && !cited.numbers.includes(daf)) {
         key('daf-mismatch');
@@ -225,9 +263,40 @@ for (const [src, c] of Object.entries(bySource)) {
   console.log(`  ${src}: ${tot} | תקין ${(((c.ok || 0) / tot) * 100).toFixed(1)}% | ${JSON.stringify(c)}`);
 }
 console.log('\nדוגמאות:');
-for (const why of ['out-of-range', 'non-bavli', 'daf-mismatch', 'amud-mismatch', 'not-in-psak', 'reworded']) {
+for (const why of ['date-not-daf', 'abbrev-in-word', 'out-of-range', 'non-bavli', 'daf-mismatch', 'amud-mismatch', 'not-in-psak', 'reworded']) {
   findings.filter((f) => f.why === why).slice(0, 4)
     .forEach((f) => console.log(`  [${why}] ${f.tractate} ${f.daf}${f.amud ?? ''} (${f.source}) ← "${f.raw}"${f.cited ? ` | בציטוט: ${f.cited}` : ''}`));
+}
+
+if (FIX) {
+  // עמוד שגוי אינו נמחק אלא מתוקן למה שכתוב בציטוט
+  const wrongAmud = findings.filter((f) => f.why === 'amud-mismatch' && (f.cited === 'a' || f.cited === 'b'));
+  let fixedAmud = 0;
+  for (const f of wrongAmud) {
+    const normalized = String(f.normalized || '').replace(/[.:]\s*$/, '') + (f.cited === 'a' ? '.' : ':');
+    const { error } = await sb.from('talmud_references')
+      .update({ amud: f.cited, normalized, validation_status: 'pending', validated_by: null })
+      .eq('id', f.id);
+    if (!error) fixedAmud++;
+  }
+  if (fixedAmud) console.log(`🔧 תוקן העמוד ב-${fixedAmud} מראי מקומות, לפי מה שכתוב בציטוט`);
+
+  const bad = findings.filter((f) => ['out-of-range', 'non-bavli', 'not-in-psak', 'daf-mismatch', 'date-not-daf', 'abbrev-in-word'].includes(f.why));
+  if (!bad.length) console.log('אין מה למחוק');
+  else {
+    const file = join(ROOT, `scripts/data/unfounded-references-${new Date().toISOString().slice(0, 10)}.json`);
+    const prev = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : [];
+    writeFileSync(file, JSON.stringify([...prev, ...bad], null, 2), 'utf8');
+    console.log(`📦 נשמר לפני המחיקה: ${file} (${bad.length} שורות)`);
+    let done = 0;
+    for (let i = 0; i < bad.length; i += 200) {
+      const ids = bad.slice(i, i + 200).map((f) => f.id);
+      const { error } = await sb.from('talmud_references').delete().in('id', ids);
+      if (error) { console.error('❌ מחיקה:', error.message); break; }
+      done += ids.length;
+    }
+    console.log(`🗑️  נמחקו ${done} מראי מקומות שהטקסט מפריך`);
+  }
 }
 
 if (CSV) {

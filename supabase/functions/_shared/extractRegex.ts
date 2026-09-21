@@ -115,6 +115,27 @@ export const citesDaf = (raw: string) => /דף|עמוד|ע['׳"״][אב]/.test(r
 export const isPerekHalacha = (raw: string) =>
   /פ['׳"״][א-ת]['׳"״]?\s*[,;]?\s*[המ]['׳"״][א-ת]/.test(raw);
 
+/**
+ * ראשי תיבות של מסכת שנבלעו בתוך מילה אחרת.
+ *
+ * "תשע״ז" מסתיים ב-ע״ז, ולכן כל תאריך עברי נקרא כמסכת עבודה זרה, והמספר
+ * שאחריו — 10.5.17 — נקרא כדף י׳. אות אחת לפני ראשי התיבות היא תחילית
+ * לגיטימית ("בע״ז", "וב״ק") רק כשלפניה אין עוד אות.
+ */
+export function abbreviationInsideWord(text: string, at: number): boolean {
+  const prev = text[at - 1];
+  if (!prev || !/[א-ת]/.test(prev)) return false;
+  const before = text[at - 2];
+  return Boolean(before && /[א-ת]/.test(before));
+}
+
+/** "דף ע״ז ע״א" — מה שאחרי "דף" הוא מספר הדף, לא שם מסכת */
+export const afterDafMarker = (text: string, at: number) =>
+  /דף\s*$/.test(text.slice(Math.max(0, at - 6), at));
+
+/** "(10.5.17)" הוא תאריך, לא דף ועמוד */
+export const looksLikeDate = (text: string, endAt: number) => /^\d/.test(text.slice(endAt, endAt + 1));
+
 export function extractWithRegex(text: string): Reference[] {
   const rawMatches: RawMatch[] = [];
   // Track all occurrences (including duplicates) for frequency counting
@@ -137,7 +158,7 @@ export function extractWithRegex(text: string): Reference[] {
   // loose: אין סימון כזה, והמספר הוא כל מילה עברית שבאה אחרי שם מסכת — שם
   // נדרשת גם צורת מספר (ספרות, אות בודדת, או גרש/גרשיים), אחרת "קידושין בטלים."
   // היה נקרא כדף צ״א.
-  const patterns: { re: RegExp; loose?: boolean }[] = [
+  const patterns: { re: RegExp; loose?: boolean; reversed?: boolean }[] = [
     // מסכת/מס' X דף Y עמוד א/ב
     { re: new RegExp(`(?:מסכת|מס['׳"])\\s*(${tractatePattern})${sep}דף\\s+(${dafToken})${sep}עמוד\\s+([אב])['׳]?`, "g") },
     // X דף Y ע"א / ע"ב (double-quote, smart-quote, gershayim, geresh variants)
@@ -154,19 +175,21 @@ export function extractWithRegex(text: string): Reference[] {
     // X Y. / Y: (dot=amud a, colon=amud b)
     { re: new RegExp(`(${tractatePattern})${sep}(${dafToken})\\s*([.:])`, "g"), loose: true },
     // X Y ע"א/ע"ב (without דף)
-    { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s+ע[""״'׳]([אב])`, "g") },
+    { re: new RegExp(`(${tractatePattern})${sep}(${dafToken})\\s+ע[""״'׳]([אב])`, "g") },
     // X Y עמ' א/ב (without דף, abbreviated)
-    { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s+עמ['׳]\\s*([אב])['׳]?`, "g") },
+    { re: new RegExp(`(${tractatePattern})${sep}(${dafToken})\\s+עמ['׳]\\s*([אב])['׳]?`, "g") },
     // X Y צד א/ב (without דף)
-    { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s+צד\\s+([אב])['׳]?`, "g") },
+    { re: new RegExp(`(${tractatePattern})${sep}(${dafToken})\\s+צד\\s+([אב])['׳]?`, "g") },
     // X Y, א/ב
-    { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s*,\\s*([אב])`, "g"), loose: true },
+    { re: new RegExp(`(${tractatePattern})${sep}(${dafToken})\\s*,\\s*([אב])`, "g"), loose: true },
     // X Y א/ב (direct letter, no Hebrew letter after)
-    { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s+([אב])(?![א-ת])`, "g"), loose: true },
+    { re: new RegExp(`(${tractatePattern})${sep}(${dafToken})\\s+([אב])(?![א-ת])`, "g"), loose: true },
     // X Y״Z — מסכת ומספר עם גרשיים בלי ציון עמוד ("מסנהדרין כ״ט"), הצורה
     // הנפוצה בכתיבה רבנית. הגרשיים נדרשים כדי שמילה רגילה לא תיקרא כדף,
     // והמבט קדימה מונע כפילות עם התבניות שיש בהן ציון עמוד.
     { re: new RegExp(`(${tractatePattern})${sep}([א-תך-ץ]+['׳"״][א-תך-ץ]+)(?![א-תך-ץ'׳"״])(?!\\s*(?:עמוד|עמ['׳]|ע[""״'׳]|צד|[.:,]))`, "g"), loose: true },
+    // דף Y עמוד א/ב במסכת X — סדר הפוך, כמו בכותרות שיעורים
+    { re: new RegExp(`\u05d3\u05e3\\s+(${dafToken})\\s+\u05e2\u05de\u05d5\u05d3\\s+([\u05d0\u05d1])['׳]?\\s+\u05d1?\u05de\u05e1\u05db\u05ea\\s+(${tractatePattern})`, "g"), reversed: true },
   ];
 
   /**
@@ -181,19 +204,25 @@ export function extractWithRegex(text: string): Reference[] {
 
   const seen = new Set<string>();
 
-  for (const { re: regex, loose } of patterns) {
+  for (const { re: regex, loose, reversed } of patterns) {
     let m: RegExpExecArray | null;
     while ((m = regex.exec(text)) !== null) {
-      let tractName = m[1].trim();
-      const dafRaw = m[2];
-      const amudIndicator = m[3] || null;
+      // בתבנית הפוכה שם המסכת בא אחרי הדף ("דף יט עמוד א במסכת בבא בתרא")
+      let tractName = (reversed ? m[3] : m[1]).trim();
+      const dafRaw = reversed ? m[1] : m[2];
+      const amudIndicator = (reversed ? m[2] : m[3]) || null;
 
       if (ABBREVIATIONS[tractName]) {
+        // ראשי תיבות בתוך מילה ("תשע״ז") או אחרי "דף" ("דף ע״ז ע״א") אינם מסכת
+        if (abbreviationInsideWord(text, m.index)) continue;
+        if (afterDafMarker(text, m.index)) continue;
         tractName = ABBREVIATIONS[tractName];
       }
       if (!TRACTATES.includes(tractName)) continue;
 
       if (loose && !plausibleDafToken(dafRaw)) continue;
+      // "(10.5.17)" — הנקודה היא מפריד תאריך ולא סימון עמוד
+      if (looksLikeDate(text, m.index + m[0].length)) continue;
 
       // ציטוט ירושלמי או פרק-והלכה אינו דף בבבלי, גם כששם המסכת זהה
       if (!citesDaf(m[0]) && precededByYerushalmi(text.slice(Math.max(0, m.index - 40), m.index))) continue;
