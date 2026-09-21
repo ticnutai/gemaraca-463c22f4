@@ -103,18 +103,32 @@ async function dafText(tractate, daf, amud) {
 }
 
 /**
- * הציטוט שהפסק מביא מהגמרא — רק מה שנמצא בתוך מרכאות אחרי ההפניה.
+ * הציטוט שהפסק מביא מהגמרא.
  *
- * המילים שאחרי ההפניה בלי מרכאות הן בדרך כלל לשון הפסק עצמו ולא לשון הגמרא,
- * ולכן חיפוש שלהן בדף מחזיר "לא נמצא" חסר משמעות. בלי מרכאות אין מה לבדוק.
+ * שתי מלכודות:
+ *   1. `context_snippet` הוא כ-165 תווים ולרוב נחתך באמצע הציטוט, ולכן הבדיקה
+ *      נעשית על **הטקסט המלא של הפסק**, בחלון שאחרי ההפניה.
+ *   2. גרשיים בעברית משמשים גם לראשי תיבות (ר״ן, נמוק״י, ד״ה) וגם למרכאות.
+ *      ההבדל: בראשי תיבות הגרשיים יושבים **בין שתי אותיות**. מרכאות פותחות
+ *      באות אחרי רווח או פיסוק.
  */
-function quotedFrom(context, raw) {
-  const ctx = String(context || '');
-  const at = ctx.indexOf(raw);
-  const tail = at >= 0 ? ctx.slice(at + raw.length) : ctx;
-  const quoted = tail.match(/["״”]([^"״”]{25,400})["״”]/)
-    || ctx.match(/["״”]([^"״”]{25,400})["״”]/);
-  return quoted ? clean(quoted[1]) : '';
+function quotedAfter(text, at, rawLen) {
+  const window = text.slice(at + rawLen, at + rawLen + 600);
+  // מרכאה שאינה בין שתי אותיות
+  const isQuoteMark = (str, i) => {
+    const prev = str[i - 1] || ' ';
+    const next = str[i + 1] || ' ';
+    return !(/[א-ת]/.test(prev) && /[א-ת]/.test(next));
+  };
+  const marks = [];
+  for (let i = 0; i < window.length; i++) {
+    if (/["״“”]/.test(window[i]) && isQuoteMark(window, i)) marks.push(i);
+  }
+  for (let i = 0; i + 1 < marks.length; i++) {
+    const body = window.slice(marks[i] + 1, marks[i + 1]);
+    if (body.length >= 25 && body.length <= 500) return clean(body);
+  }
+  return '';
 }
 
 /** כמה מצירופי ארבע המילים של הציטוט נמצאים בנוסח הדף */
@@ -127,6 +141,61 @@ function hits(quote, text) {
   return { hit: found.length, total: sh.length, sample: found[0] ?? '' };
 }
 
+/** הטקסט המלא של הפסק, בלי תגיות, עם קאש בזיכרון */
+const psakCache = new Map();
+async function psakTextOf(id) {
+  if (psakCache.has(id)) return psakCache.get(id);
+  const { data } = await sb.from('psakei_din').select('original_text,full_text').eq('id', id).single();
+  const t = String(data?.original_text || data?.full_text || '')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
+  psakCache.set(id, t);
+  return t;
+}
+
+/** מספר עברי → מספר, לקריאת שמות הדפים בוויקיטקסט */
+const heToNum = (tok) => {
+  const ones = { 'א': 1, 'ב': 2, 'ג': 3, 'ד': 4, 'ה': 5, 'ו': 6, 'ז': 7, 'ח': 8, 'ט': 9 };
+  const tens = { 'י': 10, 'כ': 20, 'ל': 30, 'מ': 40, 'נ': 50, 'ס': 60, 'ע': 70, 'פ': 80, 'צ': 90 };
+  const hund = { 'ק': 100, 'ר': 200, 'ש': 300, 'ת': 400 };
+  const str = String(tok);
+  let total = 0, i = 0;
+  while (i < str.length && hund[str[i]] !== undefined) { total += hund[str[i]]; i++; }
+  const rest = str.slice(i);
+  if (rest === 'טו') return total + 15;
+  if (rest === 'טז') return total + 16;
+  if (i < str.length && tens[str[i]] !== undefined) { total += tens[str[i]]; i++; }
+  if (i < str.length && ones[str[i]] !== undefined) { total += ones[str[i]]; i++; }
+  return i === str.length && total > 0 ? total : null;
+};
+
+/**
+ * איתור הציטוט בכל הש"ס דרך החיפוש של ויקיטקסט.
+ *
+ * זו הראיה החזקה ביותר כשהציטוט אינו בדף שאליו הפסק מפנה ולא בסמוכים לו:
+ * מחפשים את הביטוי המדויק ומקבלים את שם הדף. "נכנס לחצר בעל הבית שלא ברשות"
+ * מחזיר "בבא קמא מח א", בעוד שאצלנו נשמר דף מ׳ — כי הציטוט בפסק נקטע.
+ */
+async function searchQuote(quote) {
+  const phrase = quote.split(' ').filter(Boolean).slice(0, 8).join(' ');
+  if (phrase.split(' ').length < 5) return null;
+  try {
+    const url = `https://he.wikisource.org/w/api.php?action=query&list=search&format=json&srlimit=6&srsearch=${encodeURIComponent(`"${phrase}"`)}`;
+    const r = await fetch(url, { headers: { 'User-Agent': 'gemaraca-reference-audit/1.0 (torah study index)' } });
+    await sleep(700);
+    if (!r.ok) return null;
+    const j = await r.json();
+    for (const hit of j.query?.search ?? []) {
+      const m = String(hit.title).match(/^(.+?) ([א-ת]{1,4}) ([אב])$/);
+      if (!m) continue;
+      const daf = heToNum(m[2]);
+      if (!daf || !MAX_DAF[m[1]]) continue;
+      return { tractate: m[1], daf, amud: m[3] === 'א' ? 'a' : 'b', title: hit.title };
+    }
+  } catch { /* רשת */ }
+  return null;
+}
+
 const rows = [];
 for (let from = 0; ; from += 1000) {
   const { data, error } = await sb.from('talmud_references')
@@ -137,19 +206,21 @@ for (let from = 0; ; from += 1000) {
   if (data.length < 1000) break;
 }
 // מתחילים במה שעוד לא אומת מול נוסח הגמרא, ובעל ציטוט ארוך מספיק
-const hasQuote = (r) => /["״”][^"״”]{25,400}["״”]/.test(String(r.context_snippet));
 const work = rows
-  .filter((r) => r.validated_by !== 'gemara-text' && String(r.context_snippet).length > 60 && hasQuote(r))
+  .filter((r) => r.validated_by !== 'gemara-text' && String(r.context_snippet).length > 60)
   .sort(() => Math.random() - 0.5)
   .slice(0, LIMIT);
 console.log(`מראי מקומות עם הקשר: ${rows.length} | נבדקים כעת: ${work.length}`);
 
-const stats = { confirmed: 0, 'found-nearby': 0, 'not-found': 0, 'no-quote': 0, 'no-text': 0 };
+const stats = { confirmed: 0, 'found-nearby': 0, 'found-by-search': 0, 'other-tractate': 0, 'not-found': 0, 'no-quote': 0, 'no-text': 0 };
 const corrections = [];
+const notFound = [];
 let n = 0;
 for (const r of work) {
   n++;
-  const quote = quotedFrom(r.context_snippet, r.raw_reference);
+  const psakText = await psakTextOf(r.psak_din_id);
+  const at = psakText.indexOf(String(r.raw_reference).replace(/\s+/g, ' ').trim());
+  const quote = at >= 0 ? quotedAfter(psakText, at, String(r.raw_reference).length) : '';
   if (quote.split(' ').filter(Boolean).length < 6) { stats['no-quote']++; continue; }
 
   const amud = r.amud ?? 'a';
@@ -183,13 +254,30 @@ for (const r of work) {
     stats['found-nearby']++;
     corrections.push({ id: r.id, from: `${r.tractate} ${daf}${amud}`, to: `${r.tractate} ${found.daf}${found.amud}`, quote: quote.slice(0, 70), sample: found.sample, source: r.source });
   } else {
-    stats['not-found']++;
+    // הראיה האחרונה: איתור הציטוט בכל הש"ס דרך ויקיטקסט
+    const located = await searchQuote(quote);
+    if (located && located.tractate === r.tractate) {
+      stats['found-by-search']++;
+      corrections.push({ id: r.id, from: `${r.tractate} ${daf}${amud}`, to: `${located.tractate} ${located.daf}${located.amud}`,
+        quote: quote.slice(0, 70), sample: `ויקיטקסט: ${located.title}`, source: r.source, evidence: 'wikisource-search' });
+    } else if (located) {
+      stats['other-tractate']++;
+      notFound.push({ ref: `${r.tractate} ${daf}${amud}`, raw: r.raw_reference, quote: quote.slice(0, 70), source: r.source,
+        note: `הציטוט נמצא ב-${located.title}` });
+    } else {
+      stats['not-found']++;
+      notFound.push({ ref: `${r.tractate} ${daf}${amud}`, raw: r.raw_reference, quote: quote.slice(0, 90), source: r.source, note: '' });
+    }
   }
   if (n % 25 === 0) console.log(`  ${n}/${work.length} | ${JSON.stringify(stats)}`);
 }
 
 console.log(`\nתוצאה על ${work.length}:`);
 for (const [k, v] of Object.entries(stats)) console.log(`  ${k}: ${v}`);
+if (notFound.length) {
+  console.log('ציטוט שלא נמצא בדף ולא בסמוכים — לבדיקה ידנית:');
+  notFound.slice(0, 10).forEach((x) => console.log(`   ${x.ref} (${x.source}) ← "${x.raw}"  «${x.quote}»${x.note ? '  ⇒ ' + x.note : ''}`));
+}
 if (corrections.length) {
   console.log('\nהציטוט נמצא בדף סמוך — ראיה לדף הנכון:');
   corrections.slice(0, 12).forEach((c) => console.log(`   ${c.from} → ${c.to} (${c.source})  «${c.quote}»  | נמצא: "${c.sample}"`));
