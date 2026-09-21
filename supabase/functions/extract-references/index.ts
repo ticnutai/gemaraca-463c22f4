@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { TRACTATE_NAMES as TRACTATES, isDafInRange, MASECHTOT } from "../_shared/masechtotData.ts";
-import { extractWithRegex, numberToHebrewLetter, scoreToLevel, precededByYerushalmi, isPerekHalacha, type ConfidenceFactors, type Reference } from "../_shared/extractRegex.ts";
+import { extractWithRegex, numberToHebrewLetter, scoreToLevel, precededByYerushalmi, isPerekHalacha, citesDaf, type ConfidenceFactors, type Reference } from "../_shared/extractRegex.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,7 +76,8 @@ JSON format:
                   const rawText = String(ref.raw ?? "");
                   const at = rawText ? text.indexOf(rawText) : -1;
                   const beforeRef = at > 0 ? text.slice(Math.max(0, at - 40), at) : "";
-                  if (isPerekHalacha(rawText) || /ירושלמי|ירוש['׳]/.test(rawText) || precededByYerushalmi(beforeRef)) continue;
+                  if (isPerekHalacha(rawText)) continue;
+                  if (!citesDaf(rawText) && (/ירושלמי|ירוש['׳]/.test(rawText) || precededByYerushalmi(beforeRef))) continue;
 
                   if (ref.tractate && ref.daf && TRACTATES.includes(ref.tractate)) {
                     const dafNum = parseInt(ref.daf, 10);

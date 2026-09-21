@@ -74,4 +74,9 @@ describe("regex reference extraction", () => {
   it("reads a citation that opens with a bracket", () => {
     expect(found("בהתאם למה שנאמר בקידושין (דף ל\"א עמ' א') ששניהם שווים")).toEqual(["קידושין 31a"]);
   });
+
+  it("keeps a Bavli citation that follows a mention of the Yerushalmi", () => {
+    // "מהירושלמי סוטה פ״ה ה״א והביאו תוספות בסוטה דף כ״ז ע״ב" — שניים שונים
+    expect(found('ושכן עולה מהירושלמי סוטה פ"ה ה"א והביאו תוספות בסוטה דף כ"ז ע"ב ד"ה כשם')).toEqual(["סוטה 27b"]);
+  });
 });

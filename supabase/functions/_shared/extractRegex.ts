@@ -104,6 +104,13 @@ export function precededByYerushalmi(before: string): boolean {
   return /ירוש/.test(marks[marks.length - 1][0]);
 }
 
+/**
+ * ציטוט שיש בו "דף" או ציון עמוד הוא ציטוט בבלי, גם כשהוזכר ירושלמי לפניו:
+ * "מהירושלמי סוטה פ״ה ה״א והביאו תוספות בסוטה דף כ״ז ע״ב" — הראשון ירושלמי
+ * והשני בבלי.
+ */
+export const citesDaf = (raw: string) => /דף|עמוד|ע['׳"״][אב]/.test(raw);
+
 /** "פ״י מ״א" או "פ״ה ה״ו" — פרק ומשנה או פרק והלכה, ולעולם לא דף */
 export const isPerekHalacha = (raw: string) =>
   /פ['׳"״][א-ת]['׳"״]?\s*[,;]?\s*[המ]['׳"״][א-ת]/.test(raw);
@@ -189,7 +196,7 @@ export function extractWithRegex(text: string): Reference[] {
       if (loose && !plausibleDafToken(dafRaw)) continue;
 
       // ציטוט ירושלמי או פרק-והלכה אינו דף בבבלי, גם כששם המסכת זהה
-      if (precededByYerushalmi(text.slice(Math.max(0, m.index - 40), m.index))) continue;
+      if (!citesDaf(m[0]) && precededByYerushalmi(text.slice(Math.max(0, m.index - 40), m.index))) continue;
       if (isPerekHalacha(text.slice(m.index, m.index + m[0].length + 12))) continue;
 
       const dafNum = parseHebrewNumber(dafRaw);
