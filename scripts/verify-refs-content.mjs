@@ -69,6 +69,30 @@ const toHebrewDaf = (n) => {
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * ויקיטקסט חוסמת בקצב גבוה ומחזירה 429. בלי טיפול מפורש, כל בקשה חסומה נראית
+ * כ"הציטוט לא נמצא" — כלומר הבדיקה מדווחת על היעדר ראיה במקום על כישלון.
+ * לכן: תור עם השהיה קבועה, נסיון חוזר עם המתנה, ומונה שגיאות נפרד.
+ */
+let wikiQueue = Promise.resolve();
+let wikiErrors = 0;
+function wikisource(url, { retries = 3, gap = 700 } = {}) {
+  const run = async () => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const r = await fetch(url, { headers: { 'User-Agent': 'gemaraca-reference-audit/1.0 (torah study index; contact via repo)' } });
+      await sleep(gap);
+      if (r.ok) return r.json();
+      if (r.status === 429 || r.status >= 500) { await sleep(2000 * (attempt + 1)); continue; }
+      wikiErrors++;
+      return null;
+    }
+    wikiErrors++;
+    return null;
+  };
+  wikiQueue = wikiQueue.then(run, run);
+  return wikiQueue;
+}
+
 /** נוסח הדף משני המקורות, עם קאש על הדיסק */
 async function dafText(tractate, daf, amud) {
   const key = `${tractate}_${daf}${amud}`.replace(/[^\wא-ת]/g, '_');
@@ -90,15 +114,12 @@ async function dafText(tractate, daf, amud) {
   }
   try {
     const page = encodeURIComponent(`${tractate} ${toHebrewDaf(daf)} ${amud === 'a' ? 'א' : 'ב'}`);
-    const r = await fetch(`https://he.wikisource.org/w/api.php?action=parse&page=${page}&prop=text&format=json&redirects=1`);
-    if (r.ok) {
-      const j = await r.json();
-      out.wikisource = clean(j.parse?.text?.['*'] || '');
-    }
+    const j = await wikisource(`https://he.wikisource.org/w/api.php?action=parse&page=${page}&prop=text&format=json&redirects=1`);
+    out.wikisource = clean(j?.parse?.text?.['*'] || '');
   } catch { /* נרשם כריק */ }
-  await sleep(120);
 
-  writeFileSync(file, JSON.stringify(out), 'utf8');
+  // נוסח ריק משני המקורות לא נשמר בקאש, כדי שחסימת קצב לא תיכנס לקאש כעובדה
+  if (out.sefaria || out.wikisource) writeFileSync(file, JSON.stringify(out), 'utf8');
   return out;
 }
 
@@ -181,10 +202,8 @@ async function searchQuote(quote) {
   if (phrase.split(' ').length < 5) return null;
   try {
     const url = `https://he.wikisource.org/w/api.php?action=query&list=search&format=json&srlimit=6&srsearch=${encodeURIComponent(`"${phrase}"`)}`;
-    const r = await fetch(url, { headers: { 'User-Agent': 'gemaraca-reference-audit/1.0 (torah study index)' } });
-    await sleep(700);
-    if (!r.ok) return null;
-    const j = await r.json();
+    const j = await wikisource(url, { gap: 1200 });
+    if (!j) return { error: true };
     for (const hit of j.query?.search ?? []) {
       const m = String(hit.title).match(/^(.+?) ([א-ת]{1,4}) ([אב])$/);
       if (!m) continue;
@@ -212,7 +231,7 @@ const work = rows
   .slice(0, LIMIT);
 console.log(`מראי מקומות עם הקשר: ${rows.length} | נבדקים כעת: ${work.length}`);
 
-const stats = { confirmed: 0, 'found-nearby': 0, 'found-by-search': 0, 'other-tractate': 0, 'not-found': 0, 'no-quote': 0, 'no-text': 0 };
+const stats = { confirmed: 0, 'found-nearby': 0, 'found-by-search': 0, 'other-tractate': 0, 'not-found': 0, 'search-failed': 0, 'no-quote': 0, 'no-text': 0 };
 const corrections = [];
 const notFound = [];
 let n = 0;
@@ -256,7 +275,9 @@ for (const r of work) {
   } else {
     // הראיה האחרונה: איתור הציטוט בכל הש"ס דרך ויקיטקסט
     const located = await searchQuote(quote);
-    if (located && located.tractate === r.tractate) {
+    if (located?.error) {
+      stats['search-failed']++;
+    } else if (located && located.tractate === r.tractate) {
       stats['found-by-search']++;
       corrections.push({ id: r.id, from: `${r.tractate} ${daf}${amud}`, to: `${located.tractate} ${located.daf}${located.amud}`,
         quote: quote.slice(0, 70), sample: `ויקיטקסט: ${located.title}`, source: r.source, evidence: 'wikisource-search' });
