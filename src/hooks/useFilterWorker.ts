@@ -10,6 +10,8 @@ interface WorkerResult {
     pendingCount: number;
     regexCount: number;
     aiCount: number;
+    siteIndexCount: number;
+    otherCount: number;
     psakCount: number;
     approvedCount: number;
   };
@@ -21,6 +23,8 @@ const defaultStats: WorkerResult['stats'] = {
   pendingCount: 0,
   regexCount: 0,
   aiCount: 0,
+  siteIndexCount: 0,
+  otherCount: 0,
   psakCount: 0,
   approvedCount: 0,
 };
@@ -35,7 +39,7 @@ export function useFilterWorker(
   filterTractate: string,
   search: string,
   filterApproved: boolean = false,
-  filterSource: 'all' | 'regex' | 'ai' | 'both' = 'all',
+  filterSource: 'all' | 'regex' | 'ai' | 'both' | 'site-index' | 'extracted' = 'all',
 ) {
   const workerRef = useRef<Worker | null>(null);
   const [result, setResult] = useState<WorkerResult>({ filtered: [], grouped: {}, stats: defaultStats });
@@ -101,8 +105,7 @@ export function useFilterWorker(
       const filtered = refs.filter(r => {
         if (hideResolved && (r.validation_status === 'incorrect' || r.validation_status === 'ignored' || r.validation_status === 'correct')) return false;
         if (filterApproved && r.validation_status !== 'correct') return false;
-        if (filterSource === 'ai' && r.source !== 'ai') return false;
-        if (filterSource === 'regex' && r.source !== 'regex') return false;
+        if (filterSource !== 'all' && filterSource !== 'both' && r.source !== filterSource) return false;
         if (filterSource === 'both' && bothSet && !bothSet.has(`${r.tractate}|${r.daf}`)) return false;
         if (filterTractate !== 'all' && r.tractate !== filterTractate) return false;
         if (search && !r.normalized?.includes(search) && !r.raw_reference?.includes(search) && !r.psakei_din?.title?.includes(search)) return false;
@@ -117,7 +120,7 @@ export function useFilterWorker(
 
       const tractateSet = new Set<string>();
       const psakSet = new Set<string>();
-      let resolved = 0, pending = 0, regex = 0, ai = 0, approved = 0;
+      let resolved = 0, pending = 0, regex = 0, ai = 0, approved = 0, siteIndex = 0, other = 0;
       for (const r of refs) {
         tractateSet.add(r.tractate);
         psakSet.add(r.psak_din_id);
@@ -125,7 +128,10 @@ export function useFilterWorker(
         if (s === 'incorrect' || s === 'ignored' || s === 'correct') resolved++;
         else pending++;
         if (s === 'correct') approved++;
-        if (r.source === 'regex') regex++; else ai++;
+        if (r.source === 'regex') regex++;
+        else if (r.source === 'ai') ai++;
+        else if (r.source === 'site-index') siteIndex++;
+        else other++;
       }
 
       setResult({
@@ -137,6 +143,8 @@ export function useFilterWorker(
           pendingCount: pending,
           regexCount: regex,
           aiCount: ai,
+          siteIndexCount: siteIndex,
+          otherCount: other,
           psakCount: psakSet.size,
           approvedCount: approved,
         },

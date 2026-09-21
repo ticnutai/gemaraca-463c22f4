@@ -135,15 +135,33 @@ const rawMatchesDaf = (raw, row) => {
   return false;
 };
 
+/**
+ * ההכרעה של ספריא תקפה רק כשהציטוט עצמו נוקב בשם המסכת.
+ *
+ * הבקשה נשלחת באצווה, ומנוע הזיהוי של ספריא נושא הקשר בין השורות: למחרוזת
+ * "צח, ב" בלי שם מסכת הוא מחזיר את המסכת של השורה הקודמת באצווה. הדף תואם,
+ * המסכת לא, ומתקבלת סתירה מדומה. מחרוזות כאלה אינן נבדקות.
+ */
+const namesTractate = (raw) => TRACTATE_NAMES.some((n) => raw.includes(n))
+  || Object.keys(ABBREVIATIONS_HE).some((a) => raw.includes(a));
+
+const TRACTATE_NAMES = MASECHTOT.map((m) => m.he);
+const ABBREVIATIONS_HE = {
+  'ב"ק': 1, 'ב״ק': 1, 'ב"מ': 1, 'ב״מ': 1, 'ב"ב': 1, 'ב״ב': 1,
+  'ר"ה': 1, 'ר״ה': 1, 'ע"ז': 1, 'ע״ז': 1, 'מו"ק': 1, 'מו״ק': 1,
+};
+
 const byRaw = new Map();
-let rawMismatch = 0;
+let rawMismatch = 0, noTractate = 0;
 for (const r of refs) {
   const raw = String(r.raw_reference || '').replace(/\s+/g, ' ').trim();
   if (raw.length < 4 || raw.length > 60) continue;      // מחרוזות ארוכות הן ציטוט טקסט, לא הפניה
+  if (!namesTractate(raw)) { noTractate++; continue; }
   if (!rawMatchesDaf(raw, r)) { rawMismatch++; continue; }
   if (!byRaw.has(raw)) byRaw.set(raw, []);
   byRaw.get(raw).push(r);
 }
+if (noTractate) console.log(`דולגו ${noTractate} שורות שבהן הציטוט אינו נוקב בשם מסכת`);
 if (rawMismatch) console.log(`דולגו ${rawMismatch} שורות שבהן raw_reference אינו תואם את הדף השמור`);
 const uniques = [...byRaw.keys()].slice(0, LIMIT === Infinity ? undefined : LIMIT);
 console.log(`מראי מקומות ממתינים: ${refs.length} | מחרוזות ייחודיות לבדיקה: ${uniques.length}`);

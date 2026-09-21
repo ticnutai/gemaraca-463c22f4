@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { Check, X, EyeOff, Pencil } from 'lucide-react';
 import { TalmudRefWithPsak, TRACTATES, toHebrewDaf, toHebrewAmud, highlightRawInContext, extractContextLines, escapeHtml, ValidationStatus } from './types';
+import { shortSourceLabel } from '@/lib/referenceSource';
 
 interface Props {
   filtered: TalmudRefWithPsak[];
@@ -36,7 +37,7 @@ const TableRowItem = memo(function TableRowItem({ data, onValidate, onClickRef, 
       <TableCell>{toHebrewDaf(data.daf)}{data.amud ? ` ${toHebrewAmud(data.amud)}` : ''}</TableCell>
       <TableCell>
         <Badge variant="secondary" className="text-[10px]">
-          {data.source === 'regex' ? 'regex' : 'AI'}
+          {shortSourceLabel(data.source)}
         </Badge>
       </TableCell>
       <TableCell className="max-w-[120px] truncate text-xs text-muted-foreground">

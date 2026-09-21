@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Save, X } from 'lucide-react';
 import type { TalmudRefWithPsak } from './talmud-index/types';
+import { sourceLabel } from '@/lib/referenceSource';
 
 interface Props {
   open: boolean;
@@ -50,7 +51,7 @@ export default function RefCorrectionDialog({ open, onOpenChange, data, onSave }
 
           {/* Source info */}
           <div className="flex gap-2 text-xs text-muted-foreground">
-            <span>מקור: {data.source === 'regex' ? 'ביטוי רגולרי' : 'בינה מלאכותית'}</span>
+            <span>מקור: {sourceLabel(data.source)}</span>
             {data.psakei_din?.title && (
               <>
                 <span>•</span>

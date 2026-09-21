@@ -137,9 +137,15 @@ export function extractWithRegex(text: string): Reference[] {
     { re: new RegExp(`(${tractatePattern})\\s+(${dafToken})\\s+([אב])(?![א-ת])`, "g"), loose: true },
   ];
 
-  /** בתבנית רופפת נדרש שהאסימון ייראה כמספר ולא כמילה */
-  const looksNumeric = (tok: string) =>
-    /\d/.test(tok) || /['׳"״]/.test(tok) || tok.replace(/['׳"״]/g, "").length === 1;
+  /**
+   * בתבנית רופפת (בלי "דף" ובלי סימון עמוד) האסימון הוא כל מילה שבאה אחרי שם
+   * מסכת, ולכן נדרש שייראה כמספר: עד ארבע אותיות. את הפסילה האמיתית עושה
+   * parseHebrewNumber, שבודק את צורת המספר ודוחה "בטלים", "עליה" ו-"דף".
+   */
+  const plausibleDafToken = (tok: string) => {
+    const bare = tok.replace(/['׳"״]/g, "");
+    return /^\d+$/.test(bare) || bare.length <= 4;
+  };
 
   const seen = new Set<string>();
 
@@ -155,7 +161,7 @@ export function extractWithRegex(text: string): Reference[] {
       }
       if (!TRACTATES.includes(tractName)) continue;
 
-      if (loose && !looksNumeric(dafRaw)) continue;
+      if (loose && !plausibleDafToken(dafRaw)) continue;
 
       const dafNum = parseHebrewNumber(dafRaw);
       // טווח הדפים של המסכת עצמה, לא תקרה גלובלית: "תמורה קט״ו" אינו קיים

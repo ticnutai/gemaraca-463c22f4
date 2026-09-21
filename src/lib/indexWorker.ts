@@ -6,7 +6,7 @@
 interface TalmudReference {
   tractate: string;
   daf: string;
-  source: 'ai' | 'regex';
+  source: string;
   validation_status?: string;
   normalized?: string;
   raw_reference?: string;
@@ -21,7 +21,7 @@ interface FilterMessage {
   filterTractate: string;
   search: string;
   filterApproved: boolean;
-  filterSource: 'all' | 'regex' | 'ai' | 'both';
+  filterSource: 'all' | 'regex' | 'ai' | 'both' | 'site-index' | 'extracted';
 }
 
 interface GroupMessage {
@@ -55,8 +55,7 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
     const filtered = refs.filter((r: TalmudReference) => {
       if (hideResolved && (r.validation_status === 'incorrect' || r.validation_status === 'ignored' || r.validation_status === 'correct')) return false;
       if (filterApproved && r.validation_status !== 'correct') return false;
-      if (filterSource === 'ai' && r.source !== 'ai') return false;
-      if (filterSource === 'regex' && r.source !== 'regex') return false;
+      if (filterSource !== 'all' && filterSource !== 'both' && r.source !== filterSource) return false;
       if (filterSource === 'both' && bothSet && !bothSet.has(`${r.tractate}|${r.daf}`)) return false;
       if (filterTractate !== 'all' && r.tractate !== filterTractate) return false;
       if (search && !r.normalized?.includes(search) && !r.raw_reference?.includes(search) && !r.psakei_din?.title?.includes(search)) return false;
@@ -73,7 +72,7 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
     // Compute stats
     const tractateSet = new Set<string>();
     const psakSet = new Set<string>();
-    let resolved = 0, pending = 0, regex = 0, ai = 0, approved = 0;
+    let resolved = 0, pending = 0, regex = 0, ai = 0, approved = 0, siteIndex = 0, other = 0;
     for (const r of refs) {
       tractateSet.add(r.tractate);
       psakSet.add(r.psak_din_id);
@@ -81,7 +80,11 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
       if (s === 'incorrect' || s === 'ignored' || s === 'correct') resolved++;
       else pending++;
       if (s === 'correct') approved++;
-      if (r.source === 'regex') regex++; else ai++;
+      // כל מקור נספר בנפרד: ספירה של "כל מה שאינו regex" כ-AI מציגה מצג שווא
+      if (r.source === 'regex') regex++;
+      else if (r.source === 'ai') ai++;
+      else if (r.source === 'site-index') siteIndex++;
+      else other++;
     }
 
     self.postMessage({
@@ -94,6 +97,8 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
         pendingCount: pending,
         regexCount: regex,
         aiCount: ai,
+        siteIndexCount: siteIndex,
+        otherCount: other,
         psakCount: psakSet.size,
         approvedCount: approved,
       },

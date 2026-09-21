@@ -30,7 +30,7 @@ Claude Code. בתמצית: הממשק עברית ו-RTL; מיגרציות append
 | טבלה | תפקיד | עמודות שחשוב להכיר |
 | --- | --- | --- |
 | `psakei_din` | פסקי הדין | `title`, `court`, `year`, `case_number`, `summary`, **`full_text`**, **`source_url`**, `tags`, `original_text` (הטקסט לפני עיצוב), `beautify_count`, `content_print` (טביעת אצבע לזיהוי כפילויות), `category`, `search_vector` |
-| `talmud_references` | האינדקס המתקדם: הפניה מפסק דין לדף גמרא | `tractate`, `daf`, `amud`, `normalized`, `corrected_normalized`, `source` (`ai` / regex), `confidence_score`, `validation_status` |
+| `talmud_references` | האינדקס המתקדם: הפניה מפסק דין לדף גמרא | `tractate`, `daf`, `amud`, `normalized`, `corrected_normalized`, `confidence_score`, `validation_status`, **`source`** = מי חילץ (`site-index` / `regex` / `ai` / `extracted`), **`validated_by`** + **`validated_at`** = מי אימת. שתי השאלות נפרדות: לפני 22.9 האימות דרס את הייחוס |
 | `gemara_pages` | טקסט הגמרא לפי `sugya_id` (למשל `berakhot_2a`) | `gemara_text`, `full_text`, `daf_yomi`, `masechet` |
 | `sugya_psak_links` | קישור ידני/AI בין סוגיה לפסק | `relevance_score`, `connection_explanation` |
 | `psak_sources` | מראי מקומות שאינם בבלי: שולחן ערוך (סימן/סעיף), רמב"ם וירושלמי (פרק/הלכה) — 3,394 שורות | `corpus`, `book`, `section`, `subsection`, `display`, `raw_path` |
@@ -42,11 +42,12 @@ Claude Code. בתמצית: הממשק עברית ו-RTL; מיגרציות append
 ### קורפוסים — **רוב המסמכים אינם PDF**
 
 לכל פסק יש `source_key` שמציין מאיזה מקור הובא, וכל מקור רשום ב-`psak_source_registry`
-עם הרישוי והייחוס שלו. המספרים למטה הם מצב המסד ב-21.9.2026 (סה"כ 6,989 פסקים):
+עם הרישוי והייחוס שלו. המספרים למטה הם מצב המסד ב-22.9.2026 (סה"כ 8,541 פסקים):
 
 | `source_key` | מקור | כמות | פורמט במסד | מוריד |
 | --- | --- | --- | --- | --- |
 | `psakim.org` | אתר פסקים | 3,053 | HTML (גם `all-psakim/` בריפו) | `download-all-psakim.mjs` |
+| `daat.ac.il` | אתר דעת | 1,552 | HTML ב-windows-1255 | `download-daat-psakim.mjs` |
 | `gov.il` | בתי הדין הרבניים | 1,984 | **טקסט** שחולץ מ-docx, `source_url` לדף ב-gov.il | `download-govil-psakim.mjs` |
 | `upload` | קבצים שהועלו למערכת | 1,879 | מעורב | — |
 | `bdmz` | בית דין לממונות משפט צדק | 27 | HTML, כולל הערות שוליים | `download-bdmz-psakim.mjs` |
@@ -56,7 +57,8 @@ Claude Code. בתמצית: הממשק עברית ו-RTL; מיגרציות append
 
 מוריד חדש כותב קאש JSON ל-`scripts/data/<מקור>/`, ו-`scripts/import-cached-psakim.mjs`
 מייבא ממנו: מדלג על כפילויות לפי כותרת ולפי `content_print`, מעצב בתבנית הבית, שומר את
-הטקסט המקורי ב-`original_text`, ורושם את המקור במרשם. daat.ac.il בהורדה (כ-2,600 פסקים).
+הטקסט המקורי ב-`original_text`, ורושם את המקור במרשם. מ-daat.ac.il הורדו 2,591 פסקים
+ויובאו 1,552 — 1,041 נחסמו כי טביעת האצבע זיהתה שהם כבר במסד.
 
 **זו העובדה החשובה ביותר להבנת ארכיטקטורת הצפיין:** PDF הוא מיעוט. הצפיין הוא מעטפת אחת
 עם שני מנועי הצגה בפנים — EmbedPDF ל-PDF, ותבנית הבית ל-HTML/טקסט.
@@ -166,6 +168,34 @@ Claude Code. בתמצית: הממשק עברית ו-RTL; מיגרציות append
 
 ---
 
+## 5א. מה נעשה ב-22.9.2026 — מראי המקומות
+
+הפירוט ב-[`CHANGELOG.md`](CHANGELOG.md). בשורה אחת: **שני החילוצים סכמו אותיות עבריות בלי
+לבדוק שהצירוף הוא מספר**, ולכן מילים רגילות שבאו אחרי שם מסכת נשמרו כדפים — כולל המילה
+"דף" עצמה, שהיא ד+ף = 84. מכאן מאות מראי מקומות שלא קיימים.
+
+| מה | כמה |
+| --- | --- |
+| מילים שהומרו לדפים — נמחקו | 755 |
+| מספרים שנקטעו (`דף פ״ד` שנקרא כדף פ׳) והוחלפו בקריאה השלמה | 1,102 |
+| מראי מקומות חדשים מהחילוץ המתוקן | 6,856 |
+| סה"כ מראי מקומות במסד | 26,258 על 4,789 פסקים |
+
+**מה שונה בקוד:** מספר עברי נבדק לפי צורה (מאות יורדות, עשרה אחת, יחידה אחת, ט״ו/ט״ז),
+וכל תו עודף פוסל; הדף חייב להתקיים במסכת, גם כשה-AI מחזיר אותו; אסימון הדף שומר גרשיים
+פנימיים. החילוץ עבר ל-`supabase/functions/_shared/extractRegex.ts` והוא נבדק ב-30 בדיקות.
+
+**`scripts/extract-refs-local.mjs`** מריץ את החילוץ מקומית על 8,541 פסקים בשתי דקות, בלי
+Edge Function ובלי עלות. הוא מוסיף מה שחסר, מחליף מספר שנקטע, ואינו נוגע באינדקס האתר.
+
+⚠️ **ה-Edge Function `extract-references` בענן עדיין מריץ את הקוד הבאגי.** אין בסביבה הזו
+טוקן של Supabase (`SUPABASE_ACCESS_TOKEN`), וה-MCP מחזיר "You do not have permission",
+כך שלא ניתן היה לפרוס. עד שתיפרס, **חילוץ מהאפליקציה יחזיר מילים כדפים** — ולכן יש
+להשתמש בסקריפט המקומי. בדיקה: לשלוח לפונקציה `קידושין בטלים.`; אם חוזר `קידושין צ״א.`
+הגרסה הישנה עדיין שם.
+
+---
+
 ## 6. המלצות — מה בדקתי ומה המסקנה
 
 ### מנוע ה-PDF: להישאר על EmbedPDF v2
@@ -204,7 +234,14 @@ Claude Code. בתמצית: הממשק עברית ו-RTL; מיגרציות append
 8. **הכלל "צפיין אחד" לא הושלם בכל האפליקציה** — `PdfViewerTab` (נקרא מ-`Index.tsx`)
    ו-`RichTextViewer` (ב-`GemaraTextPanel` וב-`ModernExamplesPanel`) עדיין חיים לצד הצפיין
    המאוחד. לפסקי דין יש צפיין אחד; לשאר התכנים עוד לא.
-9. **לחבר את מראי המקומות לצפיין** — ל-`talmud_references` יש `context_snippet`, ובגרסה 2.15
+9. **לפרוס את `extract-references` המתוקן** — צריך טוקן Supabase. עד אז החילוץ מהאפליקציה
+   מחזיר מילים כדפים. אחרי הפריסה כדאי להריץ `node scripts/extract-refs-local.mjs --dry-run`
+   ולראות שהפער בין הענן למקומי נסגר.
+10. **שכבת ה-AI על החילוץ המתוקן** — 3,752 פסקים עדיין בלי מראה מקום; 1,039 מהם בלי טקסט
+   כלל, ובמדגם של 150 רוב השאר פשוט אינם מצטטים גמרא. ה-AI עשוי למצוא ציטוטים בפורמט
+   חריג, אבל זה בתשלום, ולכן שווה להריץ על מדגם לפני הכול.
+11. **29 מחלוקות בין ספריא ובינינו** ממתינות להכרעה ידנית ב-`RefCorrectionDialog`.
+12. **לחבר את מראי המקומות לצפיין** — ל-`talmud_references` יש `context_snippet`, ובגרסה 2.15
    יש `setSelection()`. יחד אפשר לסמן בפסק את הציטוט עצמו כשנכנסים אליו מדף הגמרא.
 
 ### מה **לא** הייתי עושה
@@ -219,11 +256,19 @@ Claude Code. בתמצית: הממשק עברית ו-RTL; מיגרציות append
 
 ```sh
 npm install
-npm test            # 132 בדיקות יחידה
+npm test            # 150 בדיקות יחידה
 npx tsc -p tsconfig.app.json --noEmit
 npm run build
 npm run lint        # מאות ממצאים קיימים מראש — משווים לפני/אחרי, לא מצפים לאפס
 npm run test:e2e    # Playwright; דורש npx playwright install בפעם הראשונה
+```
+
+**בדיקת מראי מקומות:**
+
+```sh
+node scripts/extract-refs-local.mjs --dry-run       # מה החילוץ היה מוסיף ומחליף
+node scripts/triage-bad-references.mjs --dry-run    # מיון מה שסומן כשגוי
+node scripts/sefaria-validate-refs.mjs --limit 120 --dry-run   # אימות מול ספריא
 ```
 
 **בדיקה ידנית מהירה בדפדפן:** גמרא → סוגיה → לשונית "פסקי דין" → "פתח פסק דין".

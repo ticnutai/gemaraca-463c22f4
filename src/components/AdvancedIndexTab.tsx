@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { BookOpen, Search, List, ChevronsUpDown, TableIcon, LayoutGrid, TreePine, Bot, Regex, GitBranch, CheckCircle2, Filter } from 'lucide-react';
+import { BookOpen, BookMarked, Search, List, ChevronsUpDown, TableIcon, LayoutGrid, TreePine, Bot, Regex, GitBranch, CheckCircle2, Filter } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
@@ -34,7 +34,7 @@ export default function AdvancedIndexTab() {
   const [filterTractate, setFilterTractate] = useState('all');
   const [hideResolved, setHideResolved] = useState(true);
   const [filterApproved, setFilterApproved] = useState(false);
-  const [filterSource, setFilterSource] = useState<'all' | 'regex' | 'ai' | 'both'>('all');
+  const [filterSource, setFilterSource] = useState<'all' | 'regex' | 'ai' | 'both' | 'site-index' | 'extracted'>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [selectedRef, setSelectedRef] = useState<TalmudRefWithPsak | null>(null);
   const [highlightIdx, setHighlightIdx] = useState(0);
@@ -57,7 +57,7 @@ export default function AdvancedIndexTab() {
     filterApproved,
     filterSource,
   );
-  const { uniqueTractates, resolvedCount, pendingCount, regexCount, aiCount, psakCount, approvedCount } = stats;
+  const { uniqueTractates, resolvedCount, pendingCount, regexCount, aiCount, siteIndexCount, otherCount, psakCount, approvedCount } = stats;
 
   const handleValidate = useCallback((id: string, status: ValidationStatus, explicitAutoDismiss?: string[]) => {
     if (explicitAutoDismiss) {
@@ -276,6 +276,13 @@ export default function AdvancedIndexTab() {
             </SelectItem>
             <SelectItem value="both">
               <span className="flex items-center gap-1">שניהם (AI + Regex)</span>
+            </SelectItem>
+            {/* אינדקס האתר הוא תיוג רשמי של המקור, ולכן המדויק מכולם */}
+            <SelectItem value="site-index">
+              <span className="flex items-center gap-1"><BookMarked className="w-3 h-3" /> אינדקס האתר ({siteIndexCount})</span>
+            </SelectItem>
+            <SelectItem value="extracted">
+              <span className="flex items-center gap-1">חילוץ אוטומטי ({otherCount})</span>
             </SelectItem>
           </SelectContent>
         </Select>

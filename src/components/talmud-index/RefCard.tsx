@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Check, X, RotateCcw, FileText, EyeOff, Minus, Plus, AlignJustify, Pencil } from 'lucide-react';
 import { TalmudRefWithPsak, highlightRawInContext, extractContextLines, escapeHtml, ValidationStatus, ConfidenceFactors } from './types';
 import PsakPreviewPopover from '../PsakPreviewPopover';
+import { sourceLabel } from '@/lib/referenceSource';
 
 interface Props {
   data: TalmudRefWithPsak;
@@ -119,7 +120,7 @@ export default memo(function RefCard({ data, onValidate, onClickRef, onCorrect, 
         <div className="flex items-center gap-2 mr-auto">
           <ScoreBadge score={data.confidence_score} confidence={data.confidence} factors={data.confidence_factors} />
           <Badge variant="secondary" className="text-[10px]">
-            {data.source === 'regex' ? 'ביטוי רגולרי' : 'בינה מלאכותית'}
+            {sourceLabel(data.source)}
           </Badge>
           {data.psakei_din && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground max-w-[200px]" title={data.psakei_din.title}>
