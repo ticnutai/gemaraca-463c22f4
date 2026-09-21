@@ -502,6 +502,20 @@ function generatePsakDinHtml(data) {
             body { background: white; padding: 0; }
             .container { box-shadow: none; border: none; padding: 20px; }
         }
+        /* \u05D8\u05DC\u05E4\u05D5\u05DF: \u05D4\u05DE\u05E1\u05D2\u05E8\u05EA \u05E0\u05E6\u05DE\u05D3\u05EA \u05DC\u05E8\u05D5\u05D7\u05D1 \u05D4\u05DE\u05E1\u05DA, \u05D8\u05D1\u05DC\u05EA \u05D4\u05E4\u05E8\u05D8\u05D9\u05DD \u05E0\u05E2\u05E8\u05DE\u05EA \u05E9\u05D5\u05E8\u05D4 \u05DE\u05EA\u05D7\u05EA \u05DC\u05E9\u05D5\u05E8\u05D4 */
+        @media (max-width: 640px) {
+            body { padding: 8px; }
+            .container { margin: 8px auto; padding: 20px 14px; border-radius: 6px; }
+            .header { margin-bottom: 24px; }
+            .header h1 { font-size: 2em; }
+            .section-title { font-size: 1.35em; margin-top: 24px; }
+            .subsection-title { font-size: 1.15em; }
+            .details-table td { display: block; width: auto; padding: 4px 0; }
+            .details-table td:first-child { width: auto; border-bottom: none; padding-top: 12px; }
+            .details-table tr:last-child td:last-child { border-bottom: none; }
+            .details-table a, .psakim-link a { word-break: break-all; overflow-wrap: anywhere; }
+            .detected-quote { margin: 12px 0; padding: 8px 12px; }
+        }
     </style>
 </head>
 <body>
