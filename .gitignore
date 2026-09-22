@@ -79,3 +79,6 @@ scripts/build/
 scripts/data/daf-cache/
 scripts/data/psakim_org/
 scripts/data/psakim_org_index.json
+
+# עץ התיוג המלא של אתר פסקים — 4 מ"ב, נבנה מחדש ב---tree
+scripts/data/psakim_org_tree.json

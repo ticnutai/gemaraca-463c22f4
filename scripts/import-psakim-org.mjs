@@ -31,6 +31,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { createClient } from '@supabase/supabase-js';
 import { ADMIN_EMAIL, ADMIN_PASSWORD } from './lib/admin-credentials.mjs';
+import { normalizeForMatch, evidenceKind, VALIDATED_BY } from './lib/psakim-citation.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE = join(ROOT, 'scripts/data/psakim_org');
@@ -106,7 +107,7 @@ for (const f of files.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
   const existing = known.byUrl.get(j.url) ?? known.byPrint.get(print.slice(0, 400)) ?? known.byTitle.get(titleKey);
   if (existing) {
     dup++;
-    refPlans.push({ psakId: existing, sources: j.sources ?? [], url: j.url });
+    refPlans.push({ psakId: existing, sources: j.sources ?? [], url: j.url, normText: normalizeForMatch(text) });
     continue;
   }
 
@@ -131,10 +132,16 @@ for (const f of files.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
       source_key: 'psakim.org',
       content_print: print,
       beautify_count: 1,
-      tags: ['psakim.org', ...(j.sources?.length ? ['מפתח מקורות'] : [])],
+      tags: [
+        'psakim.org',
+        ...(j.sources?.length ? ['מפתח מקורות'] : []),
+        // הנושאים שהאתר תייג — ניווט נושאי שאי אפשר לגזור מן הטקסט
+        ...[...new Set((j.subjects ?? []).map((s) => s.path[1]).filter(Boolean))].slice(0, 6),
+      ],
     },
     sources: j.sources ?? [],
     url: j.url,
+    normText: normalizeForMatch(text),
   });
   known.byPrint.set(print.slice(0, 400), 'pending');
   known.byTitle.set(titleKey, 'pending');
@@ -158,7 +165,7 @@ for (let i = 0; i < newRows.length; i += 50) {
   const byUrl = new Map((data ?? []).map((d) => [d.source_url, d.id]));
   for (const c of chunk) {
     const id = byUrl.get(c.url);
-    if (id) refPlans.push({ psakId: id, sources: c.sources, url: c.url });
+    if (id) refPlans.push({ psakId: id, sources: c.sources, url: c.url, normText: c.normText });
   }
   added += data?.length ?? 0;
   if (added % 200 === 0) console.log(`  נוספו ${added}/${newRows.length}`);
@@ -183,18 +190,25 @@ for (const plan of refPlans) {
       if (!daf || daf < 2 || daf > MAX_DAF[book]) continue;
       const amudLetter = String(amudNode).replace('עמוד', '').replace(/['"״׳]/g, '').trim();
       const amud = amudLetter === 'ב' ? 'b' : amudLetter === 'א' ? 'a' : null;
+      // סוג הראיה נקבע כאן פעם אחת ונשמר, כדי שהאודיט לא ידרוש ציטוט מילולי
+      // מהפניה שמקורה בזיהוי עריכתי — דרישה כזו הייתה מוחקת דווקא את הטובות.
+      const dafLetters = String(dafNode).replace(/^דף\s*/, '').trim();
+      const kind = evidenceKind(plan.normText ?? '', book, dafLetters);
       talmudRows.push({
         psak_din_id: plan.psakId,
         tractate: book,
         daf: String(daf),
         amud,
-        raw_reference: s.path.join(' '),
+        // לשון בית הדין עצמו, כפי שהמפתח שמר אותה — עדיפה על שחזור הנתיב
+        raw_reference: (s.context && String(s.context).trim().length > 3)
+          ? String(s.context).trim().slice(0, 300)
+          : s.path.join(' '),
         normalized: `${book} ${heLetter(daf)}${amud === 'a' ? '.' : amud === 'b' ? ':' : ''}`,
         confidence: 'high',
-        confidence_score: 100,
+        confidence_score: kind === 'cited' ? 100 : 90,
         source: 'site-index',
         validation_status: 'correct',
-        validated_by: 'psakim-index',
+        validated_by: VALIDATED_BY[kind],
         validated_at: new Date().toISOString(),
         user_id: userId,
       });
