@@ -29,10 +29,17 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    /**
+     * הרקע המעומעם שחוסם את העמוד. חלון שנועד לנווט בו לצד הדף — כמו בורר
+     * הדפים — נפתח בלעדיו, יחד עם `modal={false}` על ה-Dialog, כדי שאפשר יהיה
+     * להמשיך לגלול ולקרוא מאחוריו.
+     */
+    overlay?: boolean;
+  }
+>(({ className, children, overlay = true, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay />
+    {overlay && <DialogOverlay />}
     <DialogPrimitive.Content
       ref={ref}
       className={cn(

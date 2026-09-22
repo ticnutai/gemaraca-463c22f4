@@ -194,11 +194,14 @@ const DafPickerDialog = ({ trigger, open: controlledOpen, onOpenChange, startAt 
 
   const favoritesMasechtot = MASECHTOT.filter((m) => favs.includes(m.hebrewName));
 
+  // modal={false} — הבורר משמש לניווט תוך כדי לימוד, ולכן אינו נועל את הגלילה
+  // ואינו לוכד את הפוקוס, והרקע המעומעם מוסר יחד איתו.
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen} modal={false}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent
-        className="max-w-6xl w-[95vw] h-[88vh] p-0 overflow-hidden flex flex-col gap-0 border-2"
+        overlay={false}
+        className="max-w-6xl w-[95vw] h-[88vh] p-0 overflow-hidden flex flex-col gap-0 border-2 shadow-2xl"
         dir="rtl"
       >
         {/* Header bar - Navy gradient */}
