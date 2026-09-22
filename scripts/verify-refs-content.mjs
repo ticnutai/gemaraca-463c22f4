@@ -277,10 +277,15 @@ for (const r of work) {
     const located = await searchQuote(quote);
     if (located?.error) {
       stats['search-failed']++;
-    } else if (located && located.tractate === r.tractate) {
+    } else if (located && located.tractate === r.tractate
+               && !(located.daf === daf && located.amud === amud)) {
+      // תוצאה שמצביעה על אותו דף אינה תיקון — היא סימן שנוסח הדף לא נקרא
+      // בפעם הראשונה (חסימת קצב), ולכן היא מדווחת ולא נרשמת
       stats['found-by-search']++;
       corrections.push({ id: r.id, from: `${r.tractate} ${daf}${amud}`, to: `${located.tractate} ${located.daf}${located.amud}`,
         quote: quote.slice(0, 70), sample: `ויקיטקסט: ${located.title}`, source: r.source, evidence: 'wikisource-search' });
+    } else if (located && located.tractate === r.tractate) {
+      stats.confirmed++;
     } else if (located) {
       stats['other-tractate']++;
       notFound.push({ ref: `${r.tractate} ${daf}${amud}`, raw: r.raw_reference, quote: quote.slice(0, 70), source: r.source,
