@@ -137,7 +137,8 @@ async function fetchAll() {
   for (const item of list) {
     if (saved >= LIMIT) break;
     const out = join(CACHE, `${item.id}.json`);
-    if (existsSync(out)) { cached++; continue; }
+    // --refresh מחלץ מחדש גם מה שכבר בקאש, למשל אחרי תיקון בחילוץ הטקסט
+    if (existsSync(out) && !process.argv.includes('--refresh')) { cached++; continue; }
 
     const tmp = join(tmpdir(), `bethdin-${item.id}.pdf`);
     try {
