@@ -1,23 +1,23 @@
 [
   {
-    "id": "12dc67ef-1135-467e-94b6-2e5578f38a6c",
-    "psak_din_id": "55acfb5c-625b-4699-a45b-31a163e6e742",
-    "tractate": "פסחים",
-    "daf": "110",
+    "id": "3691925c-e824-4771-9bbe-5c7ad68e0a86",
+    "psak_din_id": "30acd0b4-f201-4a62-92fd-43c720afbbcb",
+    "tractate": "יבמות",
+    "daf": "116",
     "amud": null,
-    "raw_reference": "פסחים דף קי\"",
-    "normalized": "פסחים ק״י",
+    "raw_reference": "יבמות דף קט\"ז\"",
+    "normalized": "יבמות קט״ז",
     "source": "regex",
     "validation_status": "pending"
   },
   {
-    "id": "35d8c37f-08ca-4c83-9b65-219fb769bae2",
-    "psak_din_id": "fe464f71-50c8-45b2-bbc2-b0af252efddb",
-    "tractate": "בבא קמא",
-    "daf": "45",
+    "id": "99403a2f-5d87-4cc4-bb41-56ea90cb8c96",
+    "psak_din_id": "f00a2c0e-e629-4b94-b846-3025f6b2a93a",
+    "tractate": "בבא בתרא",
+    "daf": "159",
     "amud": null,
-    "raw_reference": "בבא קמא דף מה\"",
-    "normalized": "בבא קמא מ״ה",
+    "raw_reference": "בבא בתרא דף קנט\"",
+    "normalized": "בבא בתרא קנ״ט",
     "source": "regex",
     "validation_status": "pending"
   }

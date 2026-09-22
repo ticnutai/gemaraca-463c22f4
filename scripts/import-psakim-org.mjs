@@ -107,7 +107,10 @@ for (const f of files.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
   const existing = known.byUrl.get(j.url) ?? known.byPrint.get(print.slice(0, 400)) ?? known.byTitle.get(titleKey);
   if (existing) {
     dup++;
-    refPlans.push({ psakId: existing, sources: j.sources ?? [], url: j.url, normText: normalizeForMatch(text) });
+    const plan = { sources: j.sources ?? [], url: j.url, normText: normalizeForMatch(text) };
+    if (typeof existing === 'string') plan.psakId = existing;
+    else plan.pendingUrl = existing.pendingUrl;   // ייפתר אחרי ההוספה
+    refPlans.push(plan);
     continue;
   }
 
@@ -143,8 +146,13 @@ for (const f of files.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
     url: j.url,
     normText: normalizeForMatch(text),
   });
-  known.byPrint.set(print.slice(0, 400), 'pending');
-  known.byTitle.set(titleKey, 'pending');
+  // קובץ נוסף בקאש שהוא אותו פסק ימצא כאן מסמן ולא מזהה — השורה
+  // עדיין לא נכתבה. הסימון נושא את ה-url, כדי שאחרי ההוספה אפשר יהיה
+  // לפתור אותו למזהה אמיתי. קודם נכתבה כאן המחרוזת 'pending',
+  // והיא הגיעה לעמודת uuid והפילה את כל כתיבת ההפניות.
+  const placeholder = { pendingUrl: j.url };
+  known.byPrint.set(print.slice(0, 400), placeholder);
+  known.byTitle.set(titleKey, placeholder);
 }
 
 console.log(`חדשים לייבוא: ${newRows.length} | כבר במסד: ${dup} | קצרים מדי: ${short}`);
@@ -157,12 +165,14 @@ if (DRY) {
 }
 
 // ── הוספת הפסקים ────────────────────────────────────────────
+const urlToId = new Map();   // לפתרון הסימונים שהמתינו למזהה
 let added = 0;
 for (let i = 0; i < newRows.length; i += 50) {
   const chunk = newRows.slice(i, i + 50);
   const { data, error } = await sb.from('psakei_din').insert(chunk.map((c) => c.row)).select('id,source_url');
   if (error) { console.error('❌ הוספה:', error.message); break; }
   const byUrl = new Map((data ?? []).map((d) => [d.source_url, d.id]));
+  for (const [u, id] of byUrl) urlToId.set(u, id);
   for (const c of chunk) {
     const id = byUrl.get(c.url);
     if (id) refPlans.push({ psakId: id, sources: c.sources, url: c.url, normText: c.normText });
@@ -173,9 +183,21 @@ for (let i = 0; i < newRows.length; i += 50) {
 console.log(`✅ נוספו ${added} פסקים`);
 
 // ── מפתח המקורות → הפניות ──────────────────────────────────
+// פתרון הסימונים: קובץ שהיה כפילות של פסק שהמתין להוספה מקבל עכשיו את המזהה
+// האמיתי. מה שלא נפתר מדווח ואינו נכתב, במקום להגיע לעמודת uuid ולהפיל הכול.
+let unresolved = 0;
+for (const plan of refPlans) {
+  if (!plan.psakId && plan.pendingUrl) {
+    const id = urlToId.get(plan.pendingUrl);
+    if (id) plan.psakId = id; else unresolved++;
+  }
+}
+if (unresolved) console.warn(`⚠ ${unresolved} תכניות הפניה ללא מזהה — דולגו`);
+
 const talmudRows = [];
 const sourceRows = [];
 for (const plan of refPlans) {
+  if (!plan.psakId) continue;
   for (const s of plan.sources) {
     const corpus = s.path[0];
     const book = s.path[1];
@@ -243,14 +265,15 @@ const freshTalmud = talmudRows.filter((r) => !have.has(`${r.psak_din_id}|${r.tra
 let refsAdded = 0;
 for (let i = 0; i < freshTalmud.length; i += 200) {
   const { error } = await sb.from('talmud_references').insert(freshTalmud.slice(i, i + 200));
-  if (error) { console.error('❌ הפניות:', error.message); break; }
+  // מקטע שנכשל מדווח ומדלגים עליו; break הפיל קודם את כל השאר
+  if (error) { console.error(`❌ הפניות ${i}: ${error.message}`); continue; }
   refsAdded += Math.min(200, freshTalmud.length - i);
 }
 let srcAdded = 0;
 for (let i = 0; i < sourceRows.length; i += 200) {
   const { error } = await sb.from('psak_sources')
     .upsert(sourceRows.slice(i, i + 200), { onConflict: 'psak_din_id,display', ignoreDuplicates: true });
-  if (error) { console.error('❌ מקורות:', error.message); break; }
+  if (error) { console.error(`❌ מקורות ${i}: ${error.message}`); continue; }
   srcAdded += Math.min(200, sourceRows.length - i);
 }
 console.log(`✅ נוספו ${refsAdded} מראי מקומות מהמפתח ו-${srcAdded} מקורות נוספים`);
