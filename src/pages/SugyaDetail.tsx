@@ -124,6 +124,13 @@ const SugyaDetail = () => {
   const [mainTab, setMainTab] = useState("gemara");
   const [selectedGemaraText, setSelectedGemaraText] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  // מאיפה נפתח בורר הדפים. בלי זה הוא נפתח תמיד על רשימת הסדרים, גם כשהגיעו
+  // אליו מפירורי הלחם של דף מסוים.
+  const [pickerStart, setPickerStart] = useState<{ seder?: string; masechet?: string; daf?: number }>({});
+  const openPicker = (at: { seder?: string; masechet?: string; daf?: number } = {}) => {
+    setPickerStart(at);
+    setPickerOpen(true);
+  };
 
   // Keyboard shortcut: Cmd/Ctrl+K opens picker
   useEffect(() => {
@@ -380,12 +387,19 @@ const SugyaDetail = () => {
                   <>
                     <BreadcrumbSeparator><ChevronLeft className="w-3.5 h-3.5" /></BreadcrumbSeparator>
                     <BreadcrumbItem>
-                      <span className="text-muted-foreground">סדר {masechetData.seder}</span>
+                      <BreadcrumbLink asChild>
+                        <button onClick={() => openPicker({ seder: masechetData.seder })} className="hover:text-foreground transition-colors">
+                          סדר {masechetData.seder}
+                        </button>
+                      </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator><ChevronLeft className="w-3.5 h-3.5" /></BreadcrumbSeparator>
                     <BreadcrumbItem>
                       <BreadcrumbLink asChild>
-                        <button onClick={() => setPickerOpen(true)} className="hover:text-foreground transition-colors">
+                        <button
+                          onClick={() => openPicker({ seder: masechetData.seder, masechet: masechetData.hebrewName })}
+                          className="hover:text-foreground transition-colors"
+                        >
                           {masechetData.hebrewName}
                         </button>
                       </BreadcrumbLink>
@@ -397,7 +411,14 @@ const SugyaDetail = () => {
                 <>
                   <BreadcrumbSeparator><ChevronLeft className="w-3.5 h-3.5" /></BreadcrumbSeparator>
                   <BreadcrumbItem>
-                    <BreadcrumbPage>דף {sugya.dafYomi}</BreadcrumbPage>
+                    <BreadcrumbLink asChild>
+                      <button
+                        onClick={() => openPicker({ masechet: sugya.masechet, daf: parseSugyaId(id ?? '')?.dafNumber })}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        דף {sugya.dafYomi}
+                      </button>
+                    </BreadcrumbLink>
                   </BreadcrumbItem>
                 </>
               )}
@@ -416,7 +437,7 @@ const SugyaDetail = () => {
           </Button>
         </div>
 
-        <DafPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} />
+        <DafPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} startAt={pickerStart} />
 
         {/* Breadcrumb-style header: masechet/daf navigator + single page title.
             DafAmudNavigator already shows masechet name + daf controls,

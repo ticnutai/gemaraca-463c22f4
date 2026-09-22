@@ -44,6 +44,12 @@ interface DafPickerDialogProps {
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (o: boolean) => void;
+  /**
+   * מאיפה הבורר נפתח. כשנכנסים אליו מפירורי הלחם של דף מסוים, הוא אמור
+   * להיפתח על אותו מקום ולא לחזור לרשימת הסדרים: לחיצה על "ברכות" פותחת את
+   * בחירת הדפים של ברכות, ולחיצה על "דף ו׳ ע״ב" פותחת גם את בחירת העמוד.
+   */
+  startAt?: { seder?: string; masechet?: string; daf?: number };
 }
 
 const loadRecents = (): RecentItem[] => {
@@ -85,7 +91,7 @@ export const trackDafVisit = (sugyaId: string) => {
   }
 };
 
-const DafPickerDialog = ({ trigger, open: controlledOpen, onOpenChange }: DafPickerDialogProps) => {
+const DafPickerDialog = ({ trigger, open: controlledOpen, onOpenChange, startAt }: DafPickerDialogProps) => {
   const navigate = useNavigate();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
@@ -106,6 +112,16 @@ const DafPickerDialog = ({ trigger, open: controlledOpen, onOpenChange }: DafPic
     if (open) {
       setRecents(loadRecents());
       setFavs(loadFavs());
+      // פתיחה מפירורי הלחם: מתמקמים על המסכת והדף שבהם המשתמש נמצא
+      const m = startAt?.masechet
+        ? MASECHTOT.find((x) => x.hebrewName === startAt.masechet || x.sefariaName === startAt.masechet)
+        : null;
+      if (m || startAt?.seder) {
+        setSelectedSeder(m?.seder ?? startAt?.seder ?? null);
+        setSelectedMasechet(m ?? null);
+        setSelectedDaf(m && startAt?.daf ? startAt.daf : null);
+        setSearch("");
+      }
     } else {
       // Reset state on close
       setTimeout(() => {
@@ -115,7 +131,9 @@ const DafPickerDialog = ({ trigger, open: controlledOpen, onOpenChange }: DafPic
         setSelectedDaf(null);
       }, 200);
     }
-  }, [open]);
+    // גם שינוי של נקודת הפתיחה מתמקם מחדש, כדי שלחיצה על פירור אחר בזמן
+    // שהבורר פתוח תעביר אותו לשם ולא תשאיר אותו במקום הקודם
+  }, [open, startAt?.seder, startAt?.masechet, startAt?.daf]);
 
   const toggleFav = (heName: string) => {
     const next = favs.includes(heName) ? favs.filter((f) => f !== heName) : [...favs, heName];
