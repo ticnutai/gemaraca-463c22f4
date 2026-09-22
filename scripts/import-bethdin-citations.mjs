@@ -54,12 +54,22 @@ const heLetter = (n) => {
   return s;
 };
 
+// כתיבים חלופיים נפוצים בספרות הרבנית באנגלית, שאינם בטבלת המסכתות
+const ALT_SPELLINGS = {
+  'bava mezia': 'בבא מציעא', 'baba metzia': 'בבא מציעא', 'baba mezia': 'בבא מציעא',
+  'bava kama': 'בבא קמא', 'baba kamma': 'בבא קמא', 'baba kama': 'בבא קמא',
+  'bava basra': 'בבא בתרא', 'baba basra': 'בבא בתרא', 'baba batra': 'בבא בתרא',
+  'kesubos': 'כתובות', 'ketubos': 'כתובות', 'kesuvos': 'כתובות',
+  'shevuos': 'שבועות', 'yevamos': 'יבמות', 'kiddushin': 'קידושין',
+};
+
 /** "Gittin 90a" → { tractate: 'גיטין', daf: 90, amud: 'b' } */
 function parseCitation(text) {
   const line = String(text).split('\n')[0].trim();
   const m = line.match(/^([A-Z][A-Za-z' ]*?)\s+(\d{1,3})([ab])?\b/);
   if (!m) return null;
-  const he = BY_EN.get(m[1].trim().toLowerCase());
+  const key = m[1].trim().toLowerCase();
+  const he = BY_EN.get(key) ?? ALT_SPELLINGS[key];
   if (!he) return null;
   const daf = Number(m[2]);
   // "Ketubot 236" — מעבר לסוף המסכת, כלומר אינו דף
@@ -67,24 +77,38 @@ function parseCitation(text) {
   return { tractate: he, daf, amud: m[3] ?? null, raw: line };
 }
 
+const EN_NAMES = [...new Set([...BY_EN.keys(), ...Object.keys(ALT_SPELLINGS)])]
+  .sort((a, b) => b.length - a.length)
+  .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|');
+
 const { data: psakim } = await sb.from('psakei_din').select('id,title,source_url').eq('source_key', 'bethdin');
 const byUrl = new Map((psakim ?? []).map((p) => [p.source_url, p]));
 const byTitle = new Map((psakim ?? []).map((p) => [p.title, p]));
 console.log(`פסקים מבית הדין דאמריקה במסד: ${psakim?.length ?? 0}`);
 
 const rows = [];
+const seen = new Set();
 const rejected = [];
 let files = 0, noPsak = 0;
 for (const f of readdirSync(CACHE).filter((x) => x.endsWith('.json') && x !== 'index.json')) {
   const j = JSON.parse(readFileSync(join(CACHE, f), 'utf8'));
-  if (!Array.isArray(j.citations) || !j.citations.length) continue;
+  // גם פסק בלי השדה המובנה נסרק — הציטוטים באנגלית מופיעים בגוף הטקסט
   files++;
   const psak = byUrl.get(j.url) ?? byUrl.get(j.pdfUrl) ?? byTitle.get(j.title);
   if (!psak) { noPsak++; continue; }
-  for (const c of j.citations) {
+  // הציטוטים מופיעים גם בגוף הפסק ובהערות השוליים, לא רק בשדה המובנה.
+  // בתוך הטקסט הם באנגלית ("Ketubot 63b"), ולכן החילוץ העברי אינו רואה אותם.
+  const inline = [...`${j.text || ''} ${(j.footnotes || []).join(' ')}`
+    .matchAll(new RegExp(`\\b(${EN_NAMES})\\s+(\\d{1,3})\\s*([ab])?\\b`, 'g'))].map((m) => m[0]);
+
+  for (const c of [...(j.citations ?? []), ...inline]) {
     const parsed = parseCitation(c);
     if (!parsed) continue;
     if (parsed.rejected) { rejected.push(parsed.rejected); continue; }
+    const key = `${psak.id}|${parsed.tractate}|${parsed.daf}|${parsed.amud ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     rows.push({
       psak_din_id: psak.id,
       tractate: parsed.tractate,
