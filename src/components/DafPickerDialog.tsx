@@ -22,6 +22,9 @@ import {
   Home,
   X,
   Check,
+  LayoutGrid,
+  Grid2x2,
+  Grid3x3,
 } from "lucide-react";
 import { MASECHTOT, type Masechet } from "@/lib/masechtotData";
 import { toHebrewNumeral } from "@/lib/hebrewNumbers";
@@ -51,6 +54,22 @@ interface DafPickerDialogProps {
    */
   startAt?: { seder?: string; masechet?: string; daf?: number };
 }
+
+type TileSize = 'large' | 'medium' | 'small';
+const TILE_KEY = 'daf-picker-tile-size';
+const TILE_GRID: Record<TileSize, string> = {
+  large: 'grid-cols-3',
+  medium: 'grid-cols-4',
+  small: 'grid-cols-6',
+};
+const TILE_TEXT: Record<TileSize, string> = { large: 'text-lg', medium: 'text-base', small: 'text-sm' };
+const TILE_LABEL: Record<TileSize, string> = { large: 'גדול', medium: 'בינוני', small: 'קטן' };
+const loadTileSize = (): TileSize => {
+  try {
+    const v = localStorage.getItem(TILE_KEY);
+    return v === 'medium' || v === 'small' || v === 'large' ? v : 'large';
+  } catch { return 'large'; }
+};
 
 const loadRecents = (): RecentItem[] => {
   try {
@@ -101,6 +120,8 @@ const DafPickerDialog = ({ trigger, open: controlledOpen, onOpenChange, startAt 
   const [selectedSeder, setSelectedSeder] = useState<string | null>(null);
   const [selectedMasechet, setSelectedMasechet] = useState<Masechet | null>(null);
   const [selectedDaf, setSelectedDaf] = useState<number | null>(null);
+  // גודל אריחי הדפים. במסכת של 157 דפים הצפיפות חשובה, ולכן הבחירה נשמרת.
+  const [tileSize, setTileSize] = useState<TileSize>(loadTileSize);
   const [favs, setFavs] = useState<string[]>(loadFavs());
   const [recents, setRecents] = useState<RecentItem[]>(loadRecents());
 
@@ -215,13 +236,32 @@ const DafPickerDialog = ({ trigger, open: controlledOpen, onOpenChange, startAt 
               <div className="text-[11px] opacity-75">בחר סדר ← מסכת ← דף ← עמוד</div>
             </div>
           </div>
-          <button
-            onClick={() => setOpen(false)}
-            className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
-            aria-label="סגור"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* גודל אריחי הדפים: במסכת ארוכה עדיף קטן, כדי שייכנסו יותר דפים */}
+            <button
+              onClick={() => {
+                const order: TileSize[] = ['large', 'medium', 'small'];
+                const next = order[(order.indexOf(tileSize) + 1) % order.length];
+                setTileSize(next);
+                try { localStorage.setItem(TILE_KEY, next); } catch { /* מצב פרטי */ }
+              }}
+              className="h-8 px-2 rounded-lg hover:bg-white/10 flex items-center gap-1.5 transition-colors"
+              title={`גודל הדפים: ${TILE_LABEL[tileSize]} — לחץ להחלפה`}
+              aria-label={`גודל הדפים: ${TILE_LABEL[tileSize]}`}
+            >
+              {tileSize === 'large' ? <LayoutGrid className="w-4 h-4" />
+                : tileSize === 'medium' ? <Grid2x2 className="w-4 h-4" />
+                : <Grid3x3 className="w-4 h-4" />}
+              <span className="text-[11px] opacity-80 hidden sm:inline">{TILE_LABEL[tileSize]}</span>
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
+              aria-label="סגור"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Search + Breadcrumb bar */}
@@ -486,7 +526,7 @@ const DafPickerDialog = ({ trigger, open: controlledOpen, onOpenChange, startAt 
               {!selectedMasechet ? (
                 <EmptyState text="בחר מסכת תחילה" />
               ) : (
-                <div className="grid grid-cols-3 gap-1.5" dir="rtl">
+                <div className={cn('grid gap-1.5', TILE_GRID[tileSize])} dir="rtl">
                   {dafs.map((d) => {
                     const isActive = selectedDaf === d;
                     return (
@@ -500,13 +540,15 @@ const DafPickerDialog = ({ trigger, open: controlledOpen, onOpenChange, startAt 
                             : "border-border bg-card text-foreground hover:border-accent hover:bg-accent/10 hover:shadow-md hover:-translate-y-0.5"
                         )}
                       >
-                        <span className="text-lg leading-none">{toHebrewNumeral(d)}</span>
-                        <span className={cn(
-                          "text-[9px] mt-0.5 font-medium",
-                          isActive ? "text-accent-foreground/80" : "text-muted-foreground"
-                        )}>
-                          דף
-                        </span>
+                        <span className={cn('leading-none', TILE_TEXT[tileSize])}>{toHebrewNumeral(d)}</span>
+                        {tileSize !== 'small' && (
+                          <span className={cn(
+                            "text-[9px] mt-0.5 font-medium",
+                            isActive ? "text-accent-foreground/80" : "text-muted-foreground"
+                          )}>
+                            דף
+                          </span>
+                        )}
                       </button>
                     );
                   })}
