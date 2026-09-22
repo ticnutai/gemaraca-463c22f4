@@ -82,3 +82,6 @@ scripts/data/psakim_org_index.json
 
 # עץ התיוג המלא של אתר פסקים — 4 מ"ב, נבנה מחדש ב---tree
 scripts/data/psakim_org_tree.json
+
+# עותק בטיחות של קאש gov.il לפני חילוץ מחדש עם הערות שוליים — 146 מ"ב, זמני
+scripts/data/govil_old/

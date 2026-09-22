@@ -1,56 +1,23 @@
 [
   {
-    "id": "20c63cbf-9e92-4240-98b5-a8f4e0d23be9",
-    "psak_din_id": "30acd0b4-f201-4a62-92fd-43c720afbbcb",
-    "tractate": "יבמות",
-    "daf": "116",
+    "id": "12dc67ef-1135-467e-94b6-2e5578f38a6c",
+    "psak_din_id": "55acfb5c-625b-4699-a45b-31a163e6e742",
+    "tractate": "פסחים",
+    "daf": "110",
     "amud": null,
-    "raw_reference": "יבמות דף קט\"ז\"",
-    "normalized": "יבמות קט״ז",
+    "raw_reference": "פסחים דף קי\"",
+    "normalized": "פסחים ק״י",
     "source": "regex",
     "validation_status": "pending"
   },
   {
-    "id": "5d7d907f-913b-41d4-b676-b6ea2239106f",
-    "psak_din_id": "30acd0b4-f201-4a62-92fd-43c720afbbcb",
-    "tractate": "יבמות",
-    "daf": "116",
-    "amud": null,
-    "raw_reference": "יבמות דף קט\"ז\"",
-    "normalized": "יבמות קט״ז",
-    "source": "regex",
-    "validation_status": "pending"
-  },
-  {
-    "id": "a7aa6344-3b48-4166-8ac8-f180419c7364",
-    "psak_din_id": "a6891c2a-0b83-4077-8ef9-04f45158f398",
-    "tractate": "כתובות",
-    "daf": "102",
-    "amud": null,
-    "raw_reference": "כתובות דף ק\"ב\"",
-    "normalized": "כתובות ק״ב",
-    "source": "regex",
-    "validation_status": "pending"
-  },
-  {
-    "id": "bd5c05a2-5942-47a7-8ad9-8e12e4d4a0fc",
-    "psak_din_id": "c00d5774-b47c-420f-ae21-d272a32205af",
+    "id": "35d8c37f-08ca-4c83-9b65-219fb769bae2",
+    "psak_din_id": "fe464f71-50c8-45b2-bbc2-b0af252efddb",
     "tractate": "בבא קמא",
-    "daf": "116",
+    "daf": "45",
     "amud": null,
-    "raw_reference": "בב\"ק קט\"ז",
-    "normalized": "בבא קמא קט״ז",
-    "source": "regex",
-    "validation_status": "pending"
-  },
-  {
-    "id": "5a4d75a4-64f2-43e9-b275-86b94053f085",
-    "psak_din_id": "f00a2c0e-e629-4b94-b846-3025f6b2a93a",
-    "tractate": "בבא בתרא",
-    "daf": "159",
-    "amud": null,
-    "raw_reference": "בבא בתרא דף קנט\"",
-    "normalized": "בבא בתרא קנ״ט",
+    "raw_reference": "בבא קמא דף מה\"",
+    "normalized": "בבא קמא מ״ה",
     "source": "regex",
     "validation_status": "pending"
   }
