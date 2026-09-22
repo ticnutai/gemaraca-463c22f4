@@ -96,10 +96,20 @@ async function pdfToText(buf) {
     const page = await doc.getPage(p);
     const content = await page.getTextContent();
     let line = '';
+    let prevX = null;   // מיקום האסימון הקודם על ציר ה-X
     for (const item of content.items) {
       if (!('str' in item)) continue;
+      // בעברית ה-PDF לרוב אינו מכיל תווי רווח כלל, והרווח נוצר ממיקום האותיות.
+      // בלי ההשלמה הזו הטקסט חוזר כרצף אחד — "לאיגרשאדםאשתוראשונה" — ושום
+      // ביטוי רגולרי אינו מוצא בו ציטוט.
+      const x = item.transform?.[4];
+      const gap = prevX !== null && typeof x === 'number' ? Math.abs(prevX - x) : 0;
+      const needsSpace = line && !/\s$/.test(line) && !/^\s/.test(item.str)
+        && gap > Math.max(1.2, (item.height ?? 10) * 0.22);
+      if (needsSpace) line += ' ';
       line += item.str;
-      if (item.hasEOL) { text += line.trimEnd() + '\n'; line = ''; }
+      if (typeof x === 'number') prevX = x + (item.width ?? 0) * (item.dir === 'rtl' ? -1 : 1);
+      if (item.hasEOL) { text += line.trimEnd() + '\n'; line = ''; prevX = null; }
     }
     if (line) text += line + '\n';
   }
