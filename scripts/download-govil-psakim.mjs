@@ -118,25 +118,64 @@ async function buildIndex() {
 }
 
 // ── שלב 2: הורדת המסמכים וחילוץ טקסט ────────────────────────
+
+/** XML של Word → טקסט. גבול פסקה הוא `<w:p>`, וטאב הוא `<w:tab/>` */
+const xmlToText = (xml) => String(xml || '')
+  .replace(/<w:p[ >]/g, '\n<w:p ')
+  .replace(/<w:tab\/>/g, '\t')
+  .replace(/<[^>]+>/g, '')
+  .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  .replace(/[ \t]+/g, ' ')
+  .replace(/\n{3,}/g, '\n\n')
+  .trim();
+
+/**
+ * docx → טקסט, **כולל הערות השוליים**.
+ *
+ * זה לא פרט טכני: בפסקי דין רבניים מסודרים מראי המקומות יושבים דווקא בהערות
+ * ("כתבו הטוש״ע…", "יעויין בספר פתחי חושן פרק י"), ולא בגוף. קריאה של
+ * `document.xml` לבדה מפספסת אותם — במסמך שנבדק היו 10,212 תווים של הערות
+ * מול 120,703 של גוף, וכמעט כל הציטוטים היו שם.
+ */
 async function docxToText(blob) {
   const zip = new ZipReader(new BlobReader(blob));
   try {
     const entries = await zip.getEntries();
-    const doc = entries.find((e) => e.filename === 'word/document.xml');
-    if (!doc) return '';
-    const xml = await doc.getData(new TextWriter());
-    return xml
-      .replace(/<w:p[ >]/g, '\n<w:p ')
-      .replace(/<w:tab\/>/g, '\t')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-      .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-      .replace(/[ \t]+/g, ' ')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
+    const part = async (name) => {
+      const e = entries.find((x) => x.filename === name);
+      return e ? xmlToText(await e.getData(new TextWriter())) : '';
+    };
+    const body = await part('word/document.xml');
+    const foot = await part('word/footnotes.xml');
+    const end = await part('word/endnotes.xml');
+    const notes = [foot, end].filter((s) => s && s.length > 20).join('\n');
+    return { body, notes };
   } finally {
     await zip.close();
   }
+}
+
+/**
+ * doc בינארי של Word 97 → טקסט, דרך antiword.
+ *
+ * 595 מן הפסקים — 17% מהאוסף, ודווקא הישנים והחשובים — שמורים בפורמט הזה,
+ * ולא היו נקראים כלל. נבדק מול Word עצמו על אותו קובץ: Word מדד 62,826 תווי
+ * גוף, antiword החזיר 65,707 עם עיצוב, ותו שגוי אחד ב-65 אלף (0.002%).
+ */
+function docToText(path) {
+  const out = execFileSync('antiword', ['-m', 'UTF-8.txt', '-w', '0', path], {
+    encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+  });
+  const body = out
+    .replace(/\r\n?/g, '\n')
+    // סימני פסקה שאין להם מיפוי יוצאים כ-U+FFFD בשורה לעצמם. הם אינם נוגעים
+    // באף מילה או ציטוט — במסמך שנבדק 70 כאלה, כולם בין פסקאות
+    .replace(/^[�\s]*�[�\s]*$/gm, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return { body, notes: '' };
 }
 
 /**
@@ -154,38 +193,65 @@ function extractSourcesSection(text) {
   return section;
 }
 
+/** הקובץ שממנו נחלץ הטקסט: docx עדיף, ואם אין — doc בינארי */
+function pickFile(item) {
+  const files = item.files ?? [];
+  return files.find((f) => String(f.ext).toLowerCase() === 'docx')
+    ?? files.find((f) => String(f.ext).toLowerCase() === 'doc')
+    ?? null;
+}
+
 async function fetchDocs() {
   const items = JSON.parse(readFileSync(INDEX_FILE, 'utf8'));
-  const list = Object.values(items).filter((i) => i.files.some((f) => f.ext === 'docx'));
-  let done = 0, saved = 0, failed = 0, withSources = 0;
+  // הסינון היה `ext === 'docx'` והחמיץ בשקט 37 פסקים ששמורים כ-DOCX באותיות
+  // גדולות ועוד 595 שהם doc בינארי — 18% מן האוסף
+  const list = Object.values(items).filter((i) => pickFile(i));
+  let done = 0, saved = 0, withSources = 0, withNotes = 0;
+  const failures = [];
 
   for (const item of list) {
     if (saved >= LIMIT) break;
     const out = join(CACHE, `${item.urlName}.json`);
-    if (existsSync(out)) { done++; continue; }
+    if (existsSync(out) && !has('--refresh')) { done++; continue; }
 
-    const file = item.files.find((f) => f.ext === 'docx');
+    const file = pickFile(item);
+    const ext = String(file.ext).toLowerCase();
     const url = `https://www.gov.il/BlobFolder/dynamiccollectorresultitem/${item.urlName}/he/${encodeURIComponent(file.name)}`;
-    const tmp = join(tmpdir(), `govil-${item.urlName}.docx`);
+    const tmp = join(tmpdir(), `govil-${item.urlName}.${ext}`);
     try {
-      const buf = curlFile(url, tmp);
-      const text = await docxToText(new Blob([buf]));
-      if (text.length < 200) throw new Error('טקסט ריק');
+      // Cloudflare מחזיר 403 לפרצי בקשות. בלי נסיון חוזר הפסק נרשם ככשלון
+      // לצמיתות, וזה בדיוק סוג הכשל שנראה כמו "הכול ירד".
+      let lastErr = null;
+      let buf = null;
+      for (let attempt = 0; attempt < 3 && !buf; attempt++) {
+        try { buf = curlFile(url, tmp); }
+        catch (e) { lastErr = e; if (attempt < 2) await sleep(2500 * (attempt + 1)); }
+      }
+      if (!buf) throw lastErr ?? new Error('הורדה נכשלה');
+
+      const { body, notes } = ext === 'doc' ? docToText(tmp) : await docxToText(new Blob([buf]));
+      if (body.length < 200) throw new Error(`טקסט קצר מדי (${body.length})`);
+      // ההערות נשמרות גם בנפרד וגם בתוך הטקסט, כדי שחילוץ מראי המקומות יראה
+      // אותן ובמקביל יידע לזהות שהן הערות ולא גוף הפסק
+      const text = notes ? `${body}\n\n— הערות —\n${notes}` : body;
       const sources = extractSourcesSection(text);
       if (sources) withSources++;
-      writeFileSync(out, JSON.stringify({ ...item, text, sourcesSection: sources }));
+      if (notes) withNotes++;
+      writeFileSync(out, JSON.stringify({ ...item, format: ext, text, notes: notes || null, sourcesSection: sources }));
       saved++;
     } catch (e) {
-      failed++;
-      console.error(`  ❌ ${item.urlName}: ${e.message}`);
+      failures.push({ urlName: item.urlName, title: item.title, ext, error: e.message });
+      if (failures.length <= 15) console.error(`  ❌ ${item.urlName}: ${e.message}`);
     } finally {
       try { rmSync(tmp, { force: true }); } catch { /* ignore */ }
     }
     done++;
-    if (done % 25 === 0) console.log(`  ${done}/${list.length} | נשמרו ${saved} | עם רשימת מקורות ${withSources} | כשלונות ${failed}`);
+    if (done % 100 === 0) console.log(`  ${done}/${list.length} | נשמרו ${saved} | הערות שוליים ${withNotes} | רשימת מקורות ${withSources} | כשלונות ${failures.length}`);
     await sleep(DELAY);
   }
-  console.log(`✅ הורדה: ${saved} חדשים, ${withSources} מהם עם רשימת מקורות בסוף, ${failed} כשלונות`);
+  writeFileSync(join(DATA, 'govil_failed.json'), JSON.stringify(failures, null, 2), 'utf8');
+  console.log(`✅ הורדה: ${saved} חדשים | ${withNotes} עם הערות שוליים | ${withSources} עם רשימת מקורות | ${failures.length} כשלונות`);
+  if (failures.length) console.log('   הכשלונות נרשמו ב-scripts/data/govil_failed.json');
 }
 
 // ── שלב 3: ייבוא למסד ───────────────────────────────────────

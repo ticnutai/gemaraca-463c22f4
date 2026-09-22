@@ -52,6 +52,7 @@ const CACHE = join(DATA, 'psakim_org');
 const INDEX_FILE = join(DATA, 'psakim_org_index.json');
 const LOOKUPS_FILE = join(DATA, 'psakim_org_lookups.json');
 const TREE_FILE = join(DATA, 'psakim_org_tree.json');
+const FAILED_FILE = join(DATA, 'psakim_org_failed.json');
 const BASE = 'https://www.psakim.org';
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
@@ -233,7 +234,10 @@ function parseFile(j, id, lookups) {
 async function fetchAll() {
   const index = existsSync(INDEX_FILE) ? JSON.parse(readFileSync(INDEX_FILE, 'utf8')) : await buildIndex();
   const lookups = existsSync(LOOKUPS_FILE) ? loadLookups() : await buildLookups();
-  let saved = 0, cached = 0, failed = 0, withSources = 0, bavliLeaves = 0;
+  let saved = 0, cached = 0, withSources = 0, bavliLeaves = 0;
+  // כשל שקט הוא הסכנה האמיתית: כל מזהה שנפל נרשם לקובץ, כדי שיהיה אפשר לדעת
+  // מה לא נכנס ולנסות אותו שוב, ולא להסיק מ"0 שגיאות בפלט" שהכול ירד
+  const failures = [];
 
   for (const id of index) {
     if (saved >= LIMIT) break;
@@ -252,12 +256,14 @@ async function fetchAll() {
         console.log(`  ✔ ${id} — ${ruling.text.length} תווים, ${ruling.sources.length} מקורות (${bavli} בבלי) — ${String(ruling.title).slice(0, 40)}`);
       }
     } catch (e) {
-      failed++;
-      if (failed <= 10) console.error(`  ❌ ${id}: ${e.message}`);
+      failures.push({ id, error: e.message });
+      if (failures.length <= 10) console.error(`  ❌ ${id}: ${e.message}`);
     }
     await sleep(DELAY);
   }
-  console.log(`\n✅ ${saved} חדשים | ${cached} היו בקאש | ${failed} כשלונות`);
+  writeFileSync(FAILED_FILE, JSON.stringify(failures, null, 2), 'utf8');
+  console.log(`\n✅ ${saved} חדשים | ${cached} היו בקאש | ${failures.length} כשלונות`);
+  if (failures.length) console.log(`   הכשלונות נרשמו ב-scripts/data/psakim_org_failed.json`);
   console.log(`   עם עץ מקורות: ${withSources} | עלי בבלי: ${bavliLeaves}`);
 }
 
