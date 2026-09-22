@@ -757,7 +757,11 @@ export default function SourcesIndexTab() {
   const [searchFilter, setSearchFilter] = useState("");
   const [selectedTag, setSelectedTag] = useState<{ id: string; text: string } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("tree");
-  const [dataSource, setDataSource] = useState<DataSource>("sources");
+  // ברירת המחדל היא העץ המאוחד, שנשען על `talmud_references` שבמסד. עד כה
+  // נפתח כאן "sources" — צילום סטטי של אתר פסקים מתוך public/, שהקישורים שלו
+  // יוצאים החוצה ל-psakim.org במקום לפסקים שלנו. מאז שעץ המקורות של האתר
+  // יובא למסד ואומת, הצילום הוא ארכיון ולא מקור.
+  const [dataSource, setDataSource] = useState<DataSource>("unified");
 
   // Load all JSON data
   useEffect(() => {
@@ -848,28 +852,28 @@ export default function SourcesIndexTab() {
 
       {/* ───── Data Source Toggle ───── */}
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-base text-muted-foreground font-medium">מקור נתונים:</span>
+        <span className="text-base text-muted-foreground font-medium">תצוגה:</span>
         <ToggleGroup
           type="single"
           value={dataSource}
           onValueChange={(v) => v && setDataSource(v as DataSource)}
           className="bg-muted rounded-lg p-0.5"
         >
-          <ToggleGroupItem value="sources" className="gap-1.5 text-sm px-4 py-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm text-foreground">
-            <BookMarked className="w-5 h-5" />
-            מפתח המקורות
+          <ToggleGroupItem value="unified" className="gap-1.5 text-sm px-4 py-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm text-foreground">
+            <Sparkles className="w-5 h-5" />
+            עץ מאוחד
           </ToggleGroupItem>
           <ToggleGroupItem value="advanced" className="gap-1.5 text-sm px-4 py-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm text-foreground">
             <Database className="w-5 h-5" />
-            אינדקס מתקדם
+            טבלת המראי מקומות
           </ToggleGroupItem>
           <ToggleGroupItem value="both" className="gap-1.5 text-sm px-4 py-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm text-foreground">
             <Combine className="w-5 h-5" />
             שניהם יחד
           </ToggleGroupItem>
-          <ToggleGroupItem value="unified" className="gap-1.5 text-sm px-4 py-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm text-foreground">
-            <Sparkles className="w-5 h-5" />
-            עץ מאוחד
+          <ToggleGroupItem value="sources" className="gap-1.5 text-sm px-4 py-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm text-foreground">
+            <BookMarked className="w-5 h-5" />
+            צילום אתר פסקים
           </ToggleGroupItem>
         </ToggleGroup>
       </div>

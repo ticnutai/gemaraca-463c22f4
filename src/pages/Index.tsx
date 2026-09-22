@@ -11,8 +11,6 @@ const SedarimNavigator = lazy(() => import("@/components/SedarimNavigator"));
 const PsakDinTab = lazy(() => import("@/components/PsakDinTab"));
 const SearchPsakDinTab = lazy(() => import("@/components/SearchPsakDinTab"));
 const UploadPsakDinTab = lazy(() => import("@/components/UploadPsakDinTab"));
-const SmartIndexTab = lazy(() => import("@/components/SmartIndexTab"));
-const AdvancedIndexTab = lazy(() => import("@/components/AdvancedIndexTab"));
 const DownloadManagerTab = lazy(() => import("@/components/DownloadManagerTab"));
 const LearningHistoryTab = lazy(() => import("@/components/LearningHistoryTab"));
 const DafYomiTab = lazy(() => import("@/components/DafYomiTab"));
@@ -72,12 +70,10 @@ const Index = () => {
           <SectionErrorBoundary section="תוכן ראשי">
             <Suspense fallback={<TabFallback />}>
               {activeTab === "psak-din" && <PsakDinTab />}
-              {activeTab === "smart-index" && <SmartIndexTab />}
               {activeTab === "search" && <SearchPsakDinTab />}
               {activeTab === "global-search" && <GlobalSearchTab />}
               {activeTab === "upload" && <UploadPsakDinTab />}
               {activeTab === "download" && <DownloadManagerTab />}
-              {activeTab === "advanced-index" && <AdvancedIndexTab />}
               {activeTab === "learning-history" && <LearningHistoryTab />}
               {activeTab === "daf-yomi" && <DafYomiTab />}
               {activeTab === "compare" && <PsakDinCompareTab />}
@@ -93,7 +89,10 @@ const Index = () => {
               {activeTab === "recommendations" && <LearningRecommendations />}
               {activeTab === "beautify-psak" && <BeautifyPsakDinTab />}
               {activeTab === "ocr" && <OcrTab />}
-              {activeTab === "sources-index" && <SourcesIndexTab />}
+              {/* שלושת המזהים מובילים לאותו מסך. הישנים נשמרים כדי שמשתמש
+                  שהטאב האחרון שלו שמור לא ייפתח מול מסך ריק */}
+              {(activeTab === "sources-index" || activeTab === "advanced-index"
+                || activeTab === "smart-index") && <SourcesIndexTab />}
               {activeTab === "folders" && <FolderManagerTab />}
             </Suspense>
           </SectionErrorBoundary>

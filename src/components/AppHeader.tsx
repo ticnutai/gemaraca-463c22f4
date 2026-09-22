@@ -1,4 +1,4 @@
-import { DatabaseBackup, Info, BookOpen, Scale, Search, Upload, Library, User, LogOut, LogIn, ArrowDownToLine, BookMarked, History, CalendarDays, GitCompareArrows, Share2, MoreHorizontal, Menu, Type } from "lucide-react";
+import { DatabaseBackup, Info, BookOpen, Search, User, LogOut, LogIn, MoreHorizontal, Menu, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -34,24 +34,26 @@ interface AppHeaderProps {
   onTabChange: (tab: string) => void;
 }
 
+/**
+ * הסרגל העליון נושא **הקשר ופעולות גלובליות בלבד**, לא יעדים.
+ *
+ * עד כה הוא שכפל תשעה יעדים שכולם קיימים בתפריט הצד, ושני סרגלי ניווט
+ * שמציעים את אותם מקומות גורמים למשתמש לשאול "מה ההבדל?" בכל לחיצה, ומפצלים
+ * את סימן המיקום בין שני מקומות. הכלל המקובל לאפליקציות עם מדורים רבים:
+ * ניווט ראשי בצד, והסרגל העליון לחיפוש, לחשבון ולהקשר.
+ *
+ * מה שנשאר כאן: הגמרא, שהיא ההקשר שהאפליקציה חיה בתוכו, והחיפוש הגלובלי —
+ * שתי הפעולות שצריכות להיות זמינות מכל מסך.
+ */
 const tabs = [
   { id: "gemara", label: "גמרא", icon: BookOpen },
-  { id: "psak-din", label: "פסקי דין", icon: Scale },
-  { id: "smart-index", label: "אינדקס חכם", icon: Library },
-  { id: "advanced-index", label: "אינדקס מתקדם", icon: BookMarked },
   { id: "global-search", label: "חיפוש", icon: Search },
-  { id: "upload", label: "העלאה", icon: Upload },
-  { id: "download", label: "הורדה", icon: ArrowDownToLine },
-  { id: "learning-history", label: "היסטוריה", icon: History },
-  { id: "daf-yomi", label: "דף יומי", icon: CalendarDays },
-  { id: "compare", label: "השוואה", icon: GitCompareArrows },
-  { id: "knowledge-graph", label: "גרף ידע", icon: Share2 },
 ];
 
-const mainTabs = tabs.slice(0, 7);
-const moreTabs = tabs.slice(7);
-const mobileMainTabs = tabs.slice(0, 4);
-const mobileMoreTabs = tabs.slice(4);
+const mainTabs = tabs;
+const moreTabs: typeof tabs = [];
+const mobileMainTabs = tabs;
+const mobileMoreTabs: typeof tabs = [];
 
 const DataBackupPanel = lazy(() => import("@/components/backup/DataBackupPanel"));
 

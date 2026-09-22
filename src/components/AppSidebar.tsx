@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { BookOpen, Scale, Search, Upload, Pin, PinOff, ChevronDown, ChevronLeft, ArrowDownToLine, BookMarked, FileText, Database, FileType, Calendar, BookA, Map, Layers, GraduationCap, BarChart3, Compass, Paintbrush, Brain, Globe, History, CalendarCheck, GitCompareArrows, Share2, Eye, FolderOpen } from "lucide-react";
+import { BookOpen, Scale, Search, Upload, Pin, PinOff, ChevronDown, ChevronLeft, ArrowDownToLine, BookMarked, FileText, Database, FileType, Calendar, BookA, Map, Layers, GraduationCap, BarChart3, Compass, Paintbrush, Globe, History, CalendarCheck, GitCompareArrows, Share2, Eye, FolderOpen } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -65,17 +65,16 @@ const menuItems = [
     description: "הורדת פסקי דין",
   },
   {
-    id: "advanced-index",
-    title: "אינדקס מתקדם",
-    icon: BookMarked,
-    description: "אינדקס תלמודי מתקדם",
-  },
-  {
+    // שלושה מסכים שונים הציגו את אותו דבר — מראה מקום מפסק דין אל דף בגמרא:
+    // "אינדקס מתקדם" מן המסד המאומת, "אינדקס חכם" מטבלאות ניתוח מדצמבר 2025,
+    // ו"מפתח המקורות" מצילום סטטי של אתר פסקים. מדידה של שלושתם באותן שלוש
+    // בדיקות (דף בטווח המסכת, יש עמוד, הציטוט אינו שבר מילה) נתנה 81% / 39% /
+    // 20%. כאן הם מאוחדים ליעד אחד, שברירת המחדל שלו היא העץ המאוחד מן המסד,
+    // והשאר נשארים כתצוגות בתוכו.
     id: "sources-index",
     title: "מפתח המקורות",
     icon: BookOpen,
-    description: "אינדקס היררכי של מקורות הלכה מפסקי דין",
-    badge: "חדש",
+    description: "מראי מקומות מאומתים מפסקי דין אל הש\"ס",
   },
   {
     id: "bulk-shas",
@@ -144,12 +143,6 @@ const menuItems = [
     icon: Paintbrush,
     description: "עיצוב מתקדם של פסקי דין מטקסט",
     badge: "חדש",
-  },
-  {
-    id: "smart-index",
-    title: "אינדקס חכם",
-    icon: Brain,
-    description: "ניתוח והצלבה אוטומטית של פסקי דין",
   },
   {
     id: "global-search",
