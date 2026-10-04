@@ -45,8 +45,7 @@ export default function EinMishpatPanel({ tractate, daf, amud }: Props) {
     setRows(null);
     setFailed(false);
     (async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("ein_mishpat")
         .select("target_ref,target_book")
         .eq("tractate", tractate)
@@ -54,7 +53,7 @@ export default function EinMishpatPanel({ tractate, daf, amud }: Props) {
         .eq("amud", amud);
       if (!alive) return;
       if (error) { setFailed(true); return; }
-      setRows((data ?? []) as Row[]);
+      setRows(data ?? []);
     })();
     return () => { alive = false; };
   }, [tractate, daf, amud]);

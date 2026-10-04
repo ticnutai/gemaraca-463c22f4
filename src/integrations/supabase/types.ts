@@ -613,6 +613,60 @@ export type Database = {
         }
         Relationships: []
       }
+      ein_mishpat: {
+        Row: {
+          amud: string | null
+          category: string | null
+          created_at: string
+          daf: number
+          id: string
+          sefaria_ref: string
+          target_book: string | null
+          target_ref: string
+          tractate: string
+        }
+        Insert: {
+          amud?: string | null
+          category?: string | null
+          created_at?: string
+          daf: number
+          id?: string
+          sefaria_ref: string
+          target_book?: string | null
+          target_ref: string
+          tractate: string
+        }
+        Update: {
+          amud?: string | null
+          category?: string | null
+          created_at?: string
+          daf?: number
+          id?: string
+          sefaria_ref?: string
+          target_book?: string | null
+          target_ref?: string
+          tractate?: string
+        }
+        Relationships: []
+      }
+      server_diagnostics: {
+        Row: {
+          id: string
+          report: Json
+          taken_at: string
+        }
+        Insert: {
+          id?: string
+          report: Json
+          taken_at?: string
+        }
+        Update: {
+          id?: string
+          report?: Json
+          taken_at?: string
+        }
+        Relationships: []
+      }
       psak_sources: {
         Row: {
           book: string | null

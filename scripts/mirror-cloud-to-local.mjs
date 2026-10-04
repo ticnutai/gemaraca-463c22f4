@@ -106,11 +106,25 @@ console.log('═══ מראה מקומית של הענן ═══');
 console.log(`   מקור: ${env.VITE_SUPABASE_URL}`);
 const TABLES = ONLY ?? (await discoverTables()) ?? FALLBACK_TABLES;
 const summary = [];
+const skipped = [];   // טבלאות שקיימות אך לא נקראו — מראה חלקית
 
 for (const table of TABLES) {
   // שורה אחת כדי לדעת אם הטבלה קיימת ומה העמודות שלה
-  const probe = await sb.from(table).select('*').limit(1);
-  if (probe.error) { console.log(`  ${table.padEnd(22)} — דילוג (${probe.error.message.slice(0, 40)})`); continue; }
+  // בדיקת קיום. כשל חולף כאן הפיל פעם אחת טבלה שלמה מן המראה בלי שאיש
+  // ישים לב, ולכן שלושה נסיונות לפני ויתור, ורק "לא נמצאה" הוא ויתור אמיתי.
+  let probe = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    probe = await sb.from(table).select('*').limit(1);
+    if (!probe.error) break;
+    if (/Could not find the table|does not exist/i.test(probe.error.message)) break;
+    await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+  }
+  if (probe.error) {
+    const missing = /Could not find the table|does not exist/i.test(probe.error.message);
+    console.log(`  ${table.padEnd(22)} — ${missing ? 'אינה קיימת' : 'דילוג'} (${probe.error.message.slice(0, 40)})`);
+    if (!missing) skipped.push(table);
+    continue;
+  }
   if (!probe.data?.length) { console.log(`  ${table.padEnd(22)} 0`); summary.push([table, 0, 0]); continue; }
 
   // search_vector הוא tsvector גדול שאינו משמש מקומית, והוא מה שמפיל את
@@ -158,6 +172,27 @@ for (const table of TABLES) {
 
 db.exec('PRAGMA optimize');
 db.close();
+
+// שער בטיחות: מראה חלקית לעולם לא תחליף מראה שלמה.
+// ריצה אחת הצהירה 11 טבלאות ודרסה מראה של 18, ו-talmud_references נעלמה
+// לגמרי מבלי שדבר ייעצר. ההשוואה היא מול הקיימת, ו-–-force עוקף.
+if (skipped.length) console.warn(`
+⚠ ${skipped.length} טבלאות קיימות ולא נקראו: ${skipped.join(', ')}`);
+if (existsSync(DB_FILE) && !args.includes('--force')) {
+  try {
+    const old = new DatabaseSync(DB_FILE, { readOnly: true });
+    const oldTables = old.prepare("SELECT COUNT(*) c FROM sqlite_master WHERE type='table'").get().c;
+    old.close();
+    const newTables = summary.filter(([, n]) => n > 0).length;
+    if (newTables < oldTables - 1) {
+      console.error(`
+❌ המראה החדשה חלקית: ${newTables} טבלאות מול ${oldTables} בקיימת.`);
+      console.error(`   הקיימת לא נדרסה. החדשה המתינה ב-${TMP_FILE}`);
+      console.error('   אם הצמצום מכוון — הרץ שוב עם --force');
+      process.exit(1);
+    }
+  } catch { /* הקיימת פגומה בלאו הכי — מחליפים */ }
+}
 
 // החלפה אטומית: המראה הישנה נדרסת רק אחרי שהחדשה הושלמה.
 // אם השרת המקומי פועל הוא מחזיק את הקובץ פתוח ווינדוס חוסם החלפה,
