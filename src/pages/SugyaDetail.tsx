@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, BookOpen, Scale, ExternalLink, Lightbulb, FileText, HelpCircle, ChevronLeft, Home, Layers } from "lucide-react";
+import { ArrowRight, BookOpen, Scale, ExternalLink, Lightbulb, FileText, HelpCircle, ChevronLeft, Home, Layers, ScrollText } from "lucide-react";
 import DafAmudNavigator from "@/components/DafAmudNavigator";
 import DafPickerDialog, { trackDafVisit } from "@/components/DafPickerDialog";
 import {
@@ -20,6 +20,7 @@ import PsakDinSearchButton from "@/components/PsakDinSearchButton";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+const TzuratHaDafPanel = lazy(() => import("@/components/daf/TzuratHaDafPanel"));
 import { MASECHTOT } from "@/lib/masechtotData";
 import { getCachedPage, setCachedPage } from "@/lib/pageCache";
 import { toHebrewNumeral } from "@/lib/hebrewNumbers";
@@ -454,6 +455,10 @@ const SugyaDetail = () => {
               <BookOpen className="w-4 h-4 hidden sm:block" />
               גמרא
             </TabsTrigger>
+            <TabsTrigger value="tzurat" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
+              <ScrollText className="w-4 h-4 hidden sm:block" />
+              צורת הדף
+            </TabsTrigger>
             <TabsTrigger value="commentaries" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
               <BookOpen className="w-4 h-4 hidden sm:block" />
               מפרשים
@@ -489,6 +494,29 @@ const SugyaDetail = () => {
                 <GemaraTextPanel sugyaId={id || ""} dafYomi={sugya.dafYomi} masechet={sugya.masechet} />
               </Suspense>
             </SectionErrorBoundary>
+          </TabsContent>
+
+          {/* צורת הדף — העמוד כפי שהוא בדפוס וילנא, מטקסט מקומי ולא מסריקה */}
+          <TabsContent value="tzurat" className="mt-0">
+            {(() => {
+              const parsed = id ? parseSugyaId(id) : null;
+              if (!parsed) {
+                return (
+                  <p className="py-16 text-center text-muted-foreground">
+                    לא ניתן לזהות מאיזה דף הסוגיה הזו, ולכן אין מה לצייר.
+                  </p>
+                );
+              }
+              return (
+                <SectionErrorBoundary section="צורת הדף">
+                  <TzuratHaDafPanel
+                    masechet={parsed.masechet.hebrewName}
+                    daf={parsed.dafNumber}
+                    amud={parsed.amud}
+                  />
+                </SectionErrorBoundary>
+              );
+            })()}
           </TabsContent>
 
           {/* Commentaries (was nested under Gemara) */}

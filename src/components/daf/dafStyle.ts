@@ -1,0 +1,51 @@
+// הפרויקט שממנו הועתק הרכיב שמר את ההעדפות ב-Dexie. כאן הן העדפה
+// של צופה יחיד ואינה צריכה לעבור למכשיר אחר, ולכן localStorage מספיק.
+
+/** עיצוב צורת הדף — נשמר בהגדרות, הצורה נשמרת בכל שינוי. */
+export interface DafStyle {
+  /** גופן הגמרא / המפרשים */
+  mainFont: "Vilna" | "FrankRuhl" | "Heebo";
+  sideFont: "Rashi" | "FrankRuhl" | "Heebo";
+  /** 1 = ברירת מחדל; 0.85–1.6 */
+  scale: number;
+  /** הצגת ניקוד וטעמים (הווילנא המקורי ללא ניקוד) */
+  nikud: boolean;
+  /** "print" = שורות זהות לדפוס (כשיש נתוני שורות); "live" = פריסה מחושבת */
+  mode: "print" | "live";
+  colors: { main: string; inner: string; outer: string; headers: string; highlight: string };
+}
+
+export const DEFAULT_DAF_STYLE: DafStyle = {
+  mainFont: "Vilna",
+  sideFont: "Rashi",
+  scale: 1,
+  nikud: false,
+  mode: "print",
+  colors: { main: "#111111", inner: "#1c1c1c", outer: "#1c1c1c", headers: "#7a5c12", highlight: "#ffe08a" },
+};
+
+const KEY = "daf-style";
+
+export async function loadDafStyle(): Promise<DafStyle> {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return DEFAULT_DAF_STYLE;
+    const parsed = JSON.parse(raw) as Partial<DafStyle>;
+    return { ...DEFAULT_DAF_STYLE, ...parsed, colors: { ...DEFAULT_DAF_STYLE.colors, ...(parsed.colors ?? {}) } };
+  } catch {
+    // חלון פרטי, אחסון חסום או JSON פגום — בכל אלה ברירת המחדל עדיפה
+    return DEFAULT_DAF_STYLE;
+  }
+}
+
+export async function saveDafStyle(style: DafStyle): Promise<void> {
+  try { localStorage.setItem(KEY, JSON.stringify(style)); } catch { /* אחסון חסום */ }
+}
+
+/** שם גופן CSS בפועל לכל בחירה. */
+export const FONT_FAMILY: Record<DafStyle["mainFont"] | DafStyle["sideFont"], string> = {
+  Vilna: "Vilna, 'Frank Ruhl Libre', serif",
+  Rashi: "Rashi, 'Frank Ruhl Libre', serif",
+  FrankRuhl: "'Frank Ruhl Libre', serif",
+  Heebo: "Heebo, sans-serif",
+};

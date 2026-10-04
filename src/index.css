@@ -285,3 +285,7 @@ All colors MUST be HSL.
   50% { transform: translateX(-20%); }
   100% { transform: translateX(100%); }
 }
+
+/* גופני צורת הדף. הייחוס והרישיון ב-public/tzurat/ATTRIBUTION.md */
+@font-face { font-family: "Vilna"; src: url("/tzurat/assets/fonts/mekorot-vilna/Mekorot-Vilna.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Rashi"; src: url("/tzurat/assets/fonts/mekorot/Mekorot[wght].ttf") format("truetype"); font-weight: 100 900; font-display: swap; }

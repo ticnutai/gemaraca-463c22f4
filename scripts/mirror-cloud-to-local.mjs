@@ -20,7 +20,7 @@
  *   node scripts/mirror-cloud-to-local.mjs --verify     השוואת ספירות בסוף
  */
 
-import { readFileSync, mkdirSync, existsSync, rmSync, statSync, renameSync } from 'fs';
+import { readFileSync, mkdirSync, existsSync, rmSync, statSync, renameSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { DatabaseSync } from 'node:sqlite';
@@ -44,19 +44,28 @@ const PAGE = 500;
  * רק כשהאפליקציה ביקשה אותה בפועל. הרשימה למטה היא גיבוי בלבד.
  */
 async function discoverTables() {
-  try {
-    const r = await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/`, {
-      headers: { apikey: env.VITE_SUPABASE_PUBLISHABLE_KEY, Accept: 'application/openapi+json' },
-    });
-    if (!r.ok) throw new Error(`http ${r.status}`);
-    const spec = await r.json();
-    const names = Object.keys(spec.paths ?? {})
-      .filter((p) => /^\/[A-Za-z0-9_]+$/.test(p)).map((p) => p.slice(1)).sort();
-    if (names.length) { console.log(`   התגלו ${names.length} טבלאות`); return names; }
-  } catch (e) {
-    console.warn(`   ⚠ גילוי אוטומטי נכשל (${e.message}) — נופלים לרשימה הקשיחה`);
+  // נקודת ה-OpenAPI של PostgREST דורשת מפתח service_role שאין לנו, ולכן
+  // רשימת הטבלאות נגזרת מן הקוד עצמו: כל `.from('x')` שהאפליקציה
+  // קוראת לו. זה מדויק יותר מרשימה קשיחה, כי טבלה שנוספה לקוד
+  // נקלטת מעצמה — וכך התגלתה gemara_pages שחסרה במראה הראשונה.
+  const found = new Set();
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+      const full = join(dir, e.name);
+      if (e.isDirectory()) { walk(full); continue; }
+      if (!/\.(ts|tsx|mjs|js)$/.test(e.name)) continue;
+      const txt = readFileSync(full, 'utf8');
+      for (const m of txt.matchAll(/\.from\(\s*['"`]([a-z][a-z0-9_]{2,})['"`]\s*\)/g)) found.add(m[1]);
+    }
+  };
+  for (const d of ['src', 'scripts', 'supabase']) {
+    try { walk(join(ROOT, d)); } catch { /* אין תיקייה */ }
   }
-  return null;
+  // שמות שאינם טבלאות (דליי אחסון וכדומה) ייפלו מעצמם עם הודעת דילוג
+  const names = [...found].sort();
+  console.log(`   מן הקוד: ${names.length} שמות טבלאות`);
+  return names.length ? names : null;
 }
 
 const FALLBACK_TABLES = [
