@@ -64,11 +64,23 @@ for (const p of psakim) {
 const merges = [], unsure = [];
 for (const grp of groups.values()) {
   if (grp.length < 2) continue;
-  // אישור: שנה זהה, או מספר תיק זהה, או שכולם מאותו מקור (אותו קובץ הועלה שוב)
-  const years = new Set(grp.map((p) => p.year).filter(Boolean));
-  const cases = new Set(grp.map((p) => String(p.case_number ?? '').replace(/\D/g, '')).filter((s) => s.length > 3));
+  // אישור שהקבוצה היא באמת אותו פסק. הגרסה הראשונה סמכה על `cases.size === 1`,
+  // וזה היה פגם: מספר תיק שקיים **בשורה אחת בלבד** נתן קבוצה של אחד ונספר
+  // כהסכמה. כך קבוצה שהשנים בה 2025 מול 2018 סומנה כמאושרת, והיא הייתה
+  // ממזגת שני פסקים שונים. הסכמה דורשת לפחות שתי שורות שמסכימות ביניהן.
+  const yearList = grp.map((p) => p.year).filter(Boolean);
+  const caseList = grp.map((p) => String(p.case_number ?? '').replace(/\D/g, '')).filter((s) => s.length > 3);
+  const years = new Set(yearList);
+  const cases = new Set(caseList);
   const sources = new Set(grp.map((p) => p.source_key));
-  const confirmed = years.size <= 1 || cases.size === 1 || (sources.size === 1 && sources.has('upload'));
+
+  // שנים סותרות פוסלות תמיד, גם אם מספר התיק מסכים
+  const yearsAgree = years.size <= 1;
+  // מספר תיק זהה בשתי שורות לפחות
+  const casesAgree = caseList.length >= 2 && cases.size === 1;
+  // אותו קובץ שהועלה שוב ושוב: כולם מ-upload, ואין שנים סותרות
+  const sameUpload = sources.size === 1 && sources.has('upload') && yearsAgree;
+  const confirmed = (yearsAgree && (caseList.length < 2 || casesAgree)) || casesAgree || sameUpload;
   const keep = grp.reduce((a, b) => (b.len > a.len ? b : a));
   const drop = grp.filter((p) => p.id !== keep.id);
   const entry = { keep, drop, years: [...years], cases: [...cases], sources: [...sources],

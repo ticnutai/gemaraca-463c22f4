@@ -91,3 +91,6 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 data/*.db.building*
+
+# קאש עין משפט — נבנה מחדש ב-harvest-ein-mishpat.mjs
+scripts/data/ein_mishpat/
