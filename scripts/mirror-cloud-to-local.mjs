@@ -139,7 +139,7 @@ for (const table of TABLES) {
 
   // עימוד מסתגל: טבלה שיש בה טקסט מלא חורגת מזמן במנות גדולות. במקום לוותר
   // ולהשאיר מראה חלקית — מחצים את המנה ומנסים שוב, עד מנה של 25.
-  let from = 0, written = 0, page = PAGE;
+  let from = 0, written = 0, page = PAGE, netRetries = 0;
   for (;;) {
     const { data, error } = await sb.from(table).select(colList).range(from, from + page - 1);
     if (error) {
@@ -148,9 +148,18 @@ for (const table of TABLES) {
         process.stdout.write(`\r  ${table.padEnd(22)} ${written}… (מנה ${page})      `);
         continue;
       }
+      // כשל רשת חולף באמצע ריצה ארוכה הוא רגיל, ובלי נסיון חוזר הוא קוטע
+      // טבלה שלמה באמצע — בדיוק מה שהפיל כאן את talmud_references פעמיים
+      if (/fetch failed|ECONNRESET|socket hang up|network|ETIMEDOUT/i.test(error.message) && netRetries < 6) {
+        netRetries++;
+        process.stdout.write(`\r  ${table.padEnd(22)} ${written}… (נסיון ${netRetries})      `);
+        await new Promise((r) => setTimeout(r, 3000 * netRetries));
+        continue;
+      }
       console.error(`\n  ❌ ${table} @${from}: ${error.message}`);
       break;
     }
+    netRetries = 0;
     if (!data.length) break;
     db.exec('BEGIN');
     // node:sqlite מקבל ארגומנטים בודדים, לא מערך
