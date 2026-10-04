@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { fetchGzJson } from "../../lib/gzJson";
 import type { PrintLayout } from "./PrintDaf";
-import { hebrewDaf } from "../study/shas";
+import { toHebrewNumeral as hebrewDaf } from "../../lib/hebrewNumbers";
 
 /**
  * חיפוש בכל המסכתות שיש להן דפוס מדויק — בטקסט שמוצג בדף, לפי זרם (גמרא / רש"י / תוספות).
@@ -38,7 +38,7 @@ function loadCorpus(base: string): Promise<Seq[]> {
         if (!x) continue;
         for (const [amud, lay] of Object.entries(x.d)) {
           for (const s of ["gemara", "rashi", "tosafot"] as Stream[]) {
-            const lines = lay.slabs.filter((sl) => sl.s === s).flatMap((sl) => (sl.lines ?? []).map((l) => strip(l.t)));
+            const lines = (lay as PrintLayout).slabs.filter((sl) => sl.s === s).flatMap((sl) => (sl.lines ?? []).map((l) => strip(l.t)));
             if (!lines.length) continue;
             const starts: number[] = [];
             let norm = "";
