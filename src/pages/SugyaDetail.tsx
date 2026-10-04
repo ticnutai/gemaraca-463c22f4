@@ -21,6 +21,7 @@ import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const TzuratHaDafPanel = lazy(() => import("@/components/daf/TzuratHaDafPanel"));
+const EinMishpatPanel = lazy(() => import("@/components/EinMishpatPanel"));
 import { MASECHTOT } from "@/lib/masechtotData";
 import { getCachedPage, setCachedPage } from "@/lib/pageCache";
 import { toHebrewNumeral } from "@/lib/hebrewNumbers";
@@ -508,13 +509,25 @@ const SugyaDetail = () => {
                 );
               }
               return (
-                <SectionErrorBoundary section="צורת הדף">
-                  <TzuratHaDafPanel
-                    masechet={parsed.masechet.hebrewName}
-                    daf={parsed.dafNumber}
-                    amud={parsed.amud}
-                  />
-                </SectionErrorBoundary>
+                <div className="space-y-6">
+                  <SectionErrorBoundary section="צורת הדף">
+                    <TzuratHaDafPanel
+                      masechet={parsed.masechet.hebrewName}
+                      daf={parsed.dafNumber}
+                      amud={parsed.amud}
+                    />
+                  </SectionErrorBoundary>
+                  {/* עין משפט — מה נפסק להלכה מן הדף שלפניך */}
+                  <SectionErrorBoundary section="עין משפט">
+                    <Suspense fallback={null}>
+                      <EinMishpatPanel
+                        tractate={parsed.masechet.hebrewName}
+                        daf={parsed.dafNumber}
+                        amud={parsed.amud}
+                      />
+                    </Suspense>
+                  </SectionErrorBoundary>
+                </div>
               );
             })()}
           </TabsContent>
