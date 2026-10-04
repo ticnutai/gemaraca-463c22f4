@@ -127,7 +127,11 @@ for (const f of files.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
       title: j.title || `פסק ${j.id}`,
       court: j.court || 'לא צוין',
       case_number: j.caseNumber || null,
-      year: Number.isFinite(j.year) ? j.year : new Date().getFullYear(),
+      // שנת הייבוא אינה שנת הפסק. כשהאתר אינו מפרסם תאריך — NULL,
+      // כי שדה ריק אפשר להשלים ושדה שקרי אי אפשר לזהות. הגרסה הקודמת
+      // נתנה 2,084 פסקים עם שנה מומצאת, והיא גם דחתה 222 קבוצות כפילות
+      // על "סתירת שנים" שכלל לא הייתה.
+      year: Number.isFinite(j.year) ? j.year : null,
       summary: j.summary || text.slice(0, 500),
       full_text: styled,
       original_text: text,

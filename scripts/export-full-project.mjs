@@ -20,7 +20,7 @@
  *   node scripts/export-full-project.mjs --no-storage   בלי הקבצים
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, createWriteStream } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, readdirSync, createWriteStream } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { DatabaseSync } from 'node:sqlite';
@@ -39,7 +39,11 @@ const sb = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLISHABLE_KEY
 const { error: authErr } = await sb.auth.signInWithPassword({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
 if (authErr) { console.error('❌ התחברות נכשלה:', authErr.message); process.exit(1); }
 
-if (existsSync(OUT)) rmSync(OUT, { recursive: true, force: true });
+// הורדת אלפי קבצים אורכת זמן ועלולה להיקטע. מחיקת התיקייה בכל הרצה הייתה
+// מאלצת להתחיל מאפס ולאבד אלפים שכבר ירדו. עכשיו הסכימה והנתונים נכתבים
+// מחדש בכל פעם (הם מהירים), והקבצים נמשכים מאיפה שהפסיקו. להתחלה נקייה — --fresh
+if (args.includes('--fresh') && existsSync(OUT)) rmSync(OUT, { recursive: true, force: true });
+if (existsSync(join(OUT, '02_data'))) rmSync(join(OUT, '02_data'), { recursive: true, force: true });
 mkdirSync(join(OUT, '02_data'), { recursive: true });
 
 // ── 1. הסכימה ───────────────────────────────────────────────
@@ -218,7 +222,11 @@ if (!SKIP_STORAGE) {
   // `listBuckets` דורש מפתח service_role שאין לנו ומחזיר רשימה ריקה,
   // אבל גישה ישירה לדלי לפי שם כן עובדת. השמות נגזרים מן
   // הכתובות שבמסד — אלה הדליים שהאפליקציה באמת משתמשת בהם.
-  const names = new Set();
+  // ארבעת הדליים של הפרויקט. הרשימה מפורשת כי `listBuckets` דורש
+  // service_role ומחזיר ריק בלי שגיאה, וגזירה מן הכתובות שבמסד
+  // מחזירה את psakei-din-files בלבד — שלושה האחרים אינם מופיעים שם.
+  // system-backups אינו ציבורי והוא דווקא החשוב — שם יושבים גיבויי הענן.
+  const names = new Set(['psakei-din-files', 'user-books', 'shas-pdf-pages', 'system-backups']);
   const { data: bks } = await sb.storage.listBuckets();
   for (const b of bks ?? []) names.add(b.name);
   for (const r of db.prepare("SELECT DISTINCT source_url u FROM psakei_din WHERE source_url LIKE '%storage/v1%'").all()) {
@@ -260,13 +268,19 @@ if (!SKIP_STORAGE) {
     }
     console.log(`  … ${b.name}: ${listed} מסריקה, ${paths.size} אחרי איחוד עם המסד`);
 
+    // מה שכבר ירד בהרצה קודמת אינו יורד שוב
+    const already = new Set(existsSync(dir) ? readdirSync(dir) : []);
+    let skipped = 0;
     for (const path of paths) {
+      const flat = path.replace(/[/\\]/g, '__');
+      if (already.has(flat)) { skipped++; got++; continue; }
       const { data: blob, error } = await sb.storage.from(b.name).download(path);
       if (error || !blob) { failed++; continue; }
-      writeFileSync(join(dir, path.replace(/[/\\]/g, '__')), Buffer.from(await blob.arrayBuffer()));
+      writeFileSync(join(dir, flat), Buffer.from(await blob.arrayBuffer()));
       got++;
       if (got % 250 === 0) process.stdout.write(`\r  … ${got}/${paths.size} קבצים     `);
     }
+    if (skipped) console.log(`  … ${b.name}: ${skipped} כבר היו            `);
     buckets.push({ name: b.name, public: b.public, files: got, failed });
     console.log(`  ✔ ${b.name.padEnd(22)} ${got} קבצים${failed ? ` (${failed} נכשלו)` : ''}`);
   }
