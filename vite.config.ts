@@ -72,6 +72,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    watch: {
+      // `export/` ו-`data/` נכתבים על ידי סקריפטים ומכילים אלפי קבצים.
+      // בלי ההחרגה כל קובץ שיורד מפעיל רענון עמוד, ושרת הפיתוח נחנק.
+      ignored: ["**/export/**", "**/data/**", "**/scripts/data/**", "**/tmp-checks/**"],
+    },
     proxy: {
       "/api/ocr": {
         target: "http://127.0.0.1:8399",
