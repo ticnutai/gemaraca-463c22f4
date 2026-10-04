@@ -1,0 +1,24 @@
+[
+  {
+    "id": "1ee452ba-fab3-49dd-99a9-b92d7b7739fc",
+    "psak_din_id": "55acfb5c-625b-4699-a45b-31a163e6e742",
+    "tractate": "פסחים",
+    "daf": "110",
+    "amud": null,
+    "raw_reference": "פסחים דף קי\"",
+    "normalized": "פסחים ק״י",
+    "source": "regex",
+    "validation_status": "pending"
+  },
+  {
+    "id": "dcbacdeb-c1d5-454d-bbeb-433ce32b05e7",
+    "psak_din_id": "fe464f71-50c8-45b2-bbc2-b0af252efddb",
+    "tractate": "בבא קמא",
+    "daf": "45",
+    "amud": null,
+    "raw_reference": "בבא קמא דף מה\"",
+    "normalized": "בבא קמא מ״ה",
+    "source": "regex",
+    "validation_status": "pending"
+  }
+]

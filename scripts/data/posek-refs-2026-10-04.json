@@ -1,0 +1,587 @@
+[
+  {
+    "id": "6a5676d0-d8d7-493e-bc04-196dd415aa23",
+    "tractate": "בבא מציעא",
+    "daf": "25",
+    "amud": "b",
+    "raw_reference": "ב\"מ כה,ו",
+    "source": "ai",
+    "why": "המספר השני (ו=6) אינו עמוד"
+  },
+  {
+    "id": "9dd0193d-8b94-4dd3-911f-bc6c2a36a461",
+    "tractate": "בבא מציעא",
+    "daf": "2",
+    "amud": "b",
+    "raw_reference": "ב\"מ ב,ו",
+    "source": "ai",
+    "why": "המספר השני (ו=6) אינו עמוד"
+  },
+  {
+    "id": "2354ddaa-06f8-41a1-9217-dd9f8dea8ac0",
+    "tractate": "ברכות",
+    "daf": "3",
+    "amud": null,
+    "raw_reference": "ברכות ג,יד",
+    "source": "ai",
+    "why": "המספר השני (יד=14) אינו עמוד"
+  },
+  {
+    "id": "b9464af3-d894-4db4-adba-16e4b7565c54",
+    "tractate": "בבא קמא",
+    "daf": "10",
+    "amud": null,
+    "raw_reference": "ביש\"ש ב\"ק י,מט",
+    "source": "ai",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "20925b20-bd49-44a1-bf1d-12e46f61e494",
+    "tractate": "קידושין",
+    "daf": "38",
+    "amud": "b",
+    "raw_reference": "שו\"ע אה\"ע לח, כד",
+    "source": "ai",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "5c011826-5e31-4a2b-9ec7-bf9791343f48",
+    "tractate": "בבא בתרא",
+    "daf": "14",
+    "amud": null,
+    "raw_reference": "ב\"ב יד,יד",
+    "source": "ai",
+    "why": "המספר השני (יד=14) אינו עמוד"
+  },
+  {
+    "id": "cb83a3a6-6a6c-4ee1-be4e-d6d1b3e0d0cd",
+    "tractate": "בבא בתרא",
+    "daf": "12",
+    "amud": null,
+    "raw_reference": "ב\"ב יב,ו",
+    "source": "ai",
+    "why": "המספר השני (ו=6) אינו עמוד"
+  },
+  {
+    "id": "7cecb5ce-d724-40ab-9201-7e192a9c577a",
+    "tractate": "בבא קמא",
+    "daf": "11",
+    "amud": null,
+    "raw_reference": "ב\"ק יא,כ",
+    "source": "ai",
+    "why": "המספר השני (כ=20) אינו עמוד"
+  },
+  {
+    "id": "386095f9-fb98-4b35-80d3-9d4f05c7e6d4",
+    "tractate": "בבא בתרא",
+    "daf": "106",
+    "amud": null,
+    "raw_reference": "מהר\"ם ב\"ב (דפוס פראג סימן ק\"ו)",
+    "source": "ai",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "dd1613be-cbed-4bd9-9a75-acb11c9ba758",
+    "tractate": "בבא מציעא",
+    "daf": "5",
+    "amud": "b",
+    "raw_reference": "ב\"מ ה,לב",
+    "source": "extracted",
+    "why": "המספר השני (לב=32) אינו עמוד"
+  },
+  {
+    "id": "fb10c94c-738f-4106-97de-23faf3b9e83f",
+    "tractate": "בבא קמא",
+    "daf": "13",
+    "amud": null,
+    "raw_reference": "חזו״א ב״ק סי׳ י״ג",
+    "source": "ai",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "a0443668-f84b-4831-b40a-6728966706bf",
+    "tractate": "בבא קמא",
+    "daf": "113",
+    "amud": null,
+    "raw_reference": "מהרי\"ט א, קיג",
+    "source": "ai",
+    "why": "המספר השני (קיג=113) אינו עמוד"
+  },
+  {
+    "id": "04eabf40-6bae-4be1-8b98-ef3c075c74f5",
+    "tractate": "גיטין",
+    "daf": "8",
+    "amud": "b",
+    "raw_reference": "גיטין ח,ג",
+    "source": "ai",
+    "why": "המספר השני (ג=3) אינו עמוד"
+  },
+  {
+    "id": "de5fdb7c-9614-42cf-a388-f74c4909181a",
+    "tractate": "קידושין",
+    "daf": "7",
+    "amud": null,
+    "raw_reference": "קדושין ז,ו",
+    "source": "ai",
+    "why": "המספר השני (ו=6) אינו עמוד"
+  },
+  {
+    "id": "5dbe43f4-4e9f-46db-9e80-c31da27aef98",
+    "tractate": "בבא קמא",
+    "daf": "10",
+    "amud": null,
+    "raw_reference": "בבא קמא י, כח",
+    "source": "ai",
+    "why": "המספר השני (כח=28) אינו עמוד"
+  },
+  {
+    "id": "8c988378-8cbf-4363-8aa3-0035e6f8cb4d",
+    "tractate": "בבא קמא",
+    "daf": "9",
+    "amud": "b",
+    "raw_reference": "בבא קמא ט, כד",
+    "source": "ai",
+    "why": "המספר השני (כד=24) אינו עמוד"
+  },
+  {
+    "id": "3ab48360-1050-4af8-8e23-9266d1ab4de7",
+    "tractate": "בבא קמא",
+    "daf": "10",
+    "amud": null,
+    "raw_reference": "ב\"ק י,ט",
+    "source": "ai",
+    "why": "המספר השני (ט=9) אינו עמוד"
+  },
+  {
+    "id": "6ad350aa-e652-4e7a-8fd1-6606e7b32c59",
+    "tractate": "מועד קטן",
+    "daf": "14",
+    "amud": "a",
+    "raw_reference": "מו\"ק (יד,ע",
+    "source": "ai",
+    "why": "המספר השני (ע=70) אינו עמוד"
+  },
+  {
+    "id": "7b4183c7-2638-4fce-866e-1046cf7f6d9b",
+    "tractate": "בבא מציעא",
+    "daf": "4",
+    "amud": "b",
+    "raw_reference": "ב\"מ ד, כ",
+    "source": "ai",
+    "why": "המספר השני (כ=20) אינו עמוד"
+  },
+  {
+    "id": "69b05e23-b3e6-4581-9f98-e098306bb1fe",
+    "tractate": "קידושין",
+    "daf": "28",
+    "amud": "a",
+    "raw_reference": "קדושין כח,ז",
+    "source": "ai",
+    "why": "המספר השני (ז=7) אינו עמוד"
+  },
+  {
+    "id": "e2ab282b-e84a-4024-8e3c-8f98f95aa9a6",
+    "tractate": "בבא קמא",
+    "daf": "21",
+    "amud": null,
+    "raw_reference": "ב\"ק כא,ה",
+    "source": "ai",
+    "why": "המספר השני (ה=5) אינו עמוד"
+  },
+  {
+    "id": "c1935c40-865f-49b7-8128-94a24305f83b",
+    "tractate": "בבא בתרא",
+    "daf": "12",
+    "amud": "b",
+    "raw_reference": "ב\"ב יב,ד",
+    "source": "ai",
+    "why": "המספר השני (ד=4) אינו עמוד"
+  },
+  {
+    "id": "730e9b63-59ac-4a42-8a39-fda27cebaebf",
+    "tractate": "בבא מציעא",
+    "daf": "4",
+    "amud": "b",
+    "raw_reference": "בב\"מ ד,טז",
+    "source": "ai",
+    "why": "המספר השני (טז=16) אינו עמוד"
+  },
+  {
+    "id": "da84b871-cf47-4b12-b79b-6dd3b7820445",
+    "tractate": "בבא קמא",
+    "daf": "16",
+    "amud": "b",
+    "raw_reference": "ב\"ק טז,יט",
+    "source": "ai",
+    "why": "המספר השני (יט=19) אינו עמוד"
+  },
+  {
+    "id": "a09acbbf-f01f-4600-8c7c-9eeba8f7220a",
+    "tractate": "ברכות",
+    "daf": "5",
+    "amud": "a",
+    "raw_reference": "ברכות ה,ד",
+    "source": "ai",
+    "why": "המספר השני (ד=4) אינו עמוד"
+  },
+  {
+    "id": "d2e50a58-ed7a-4128-8f86-ddffeeb4b165",
+    "tractate": "בבא קמא",
+    "daf": "9",
+    "amud": null,
+    "raw_reference": "ב\"ק ט,יג",
+    "source": "ai",
+    "why": "המספר השני (יג=13) אינו עמוד"
+  },
+  {
+    "id": "9e62a410-7c88-43ff-b824-2d945a624f2c",
+    "tractate": "בבא קמא",
+    "daf": "23",
+    "amud": null,
+    "raw_reference": "ב\"ק כג,כג",
+    "source": "ai",
+    "why": "המספר השני (כג=23) אינו עמוד"
+  },
+  {
+    "id": "456de5d9-0934-404f-bec8-d1dc4068f1c4",
+    "tractate": "מועד קטן",
+    "daf": "17",
+    "amud": null,
+    "raw_reference": "מו\"ק א,יז",
+    "source": "ai",
+    "why": "המספר השני (יז=17) אינו עמוד"
+  },
+  {
+    "id": "ee3a36e1-8caa-4abe-919b-7e846b5cd3c9",
+    "tractate": "בבא קמא",
+    "daf": "6",
+    "amud": "null",
+    "raw_reference": "חזו\"א ב\"ק ו",
+    "source": "ai",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "64e7e2f5-5f7c-4bc2-ae12-e366f9fc6f7e",
+    "tractate": "סוכה",
+    "daf": "30",
+    "amud": "b",
+    "raw_reference": "רא\"ש סוכה ג,ל",
+    "source": "ai",
+    "why": "המספר השני (ל=30) אינו עמוד"
+  },
+  {
+    "id": "b947b31a-6e04-4652-8afa-8e7e74452c5f",
+    "tractate": "בבא קמא",
+    "daf": "10",
+    "amud": "c",
+    "raw_reference": "ב\"ק י,ג",
+    "source": "ai",
+    "why": "המספר השני (ג=3) אינו עמוד"
+  },
+  {
+    "id": "93548a4a-bbaf-45ca-ab02-1e1dee2f32da",
+    "tractate": "בבא קמא",
+    "daf": "14",
+    "amud": "b",
+    "raw_reference": "ב\"ק יד,ה",
+    "source": "ai",
+    "why": "המספר השני (ה=5) אינו עמוד"
+  },
+  {
+    "id": "b43e35dc-298e-4f53-bf21-a7034a647ad9",
+    "tractate": "בבא קמא",
+    "daf": "3",
+    "amud": null,
+    "raw_reference": "ב\"ק ג,כט",
+    "source": "ai",
+    "why": "המספר השני (כט=29) אינו עמוד"
+  },
+  {
+    "id": "97bbbc6e-c867-4d6b-8cb7-642a73c862c8",
+    "tractate": "בבא קמא",
+    "daf": "6",
+    "amud": null,
+    "raw_reference": "ב\"ק ו,ג",
+    "source": "ai",
+    "why": "המספר השני (ג=3) אינו עמוד"
+  },
+  {
+    "id": "81b9c66a-5f06-42ba-9edf-925f53e7cc8d",
+    "tractate": "בבא בתרא",
+    "daf": "14",
+    "amud": null,
+    "raw_reference": "ב\"ב יד,יג",
+    "source": "ai",
+    "why": "המספר השני (יג=13) אינו עמוד"
+  },
+  {
+    "id": "4b2daebb-3b0d-49e0-bfc3-85ae1e048994",
+    "tractate": "בבא בתרא",
+    "daf": "13",
+    "amud": null,
+    "raw_reference": "ב\"ב יג,י",
+    "source": "ai",
+    "why": "המספר השני (י=10) אינו עמוד"
+  },
+  {
+    "id": "1b2655d7-b149-4a8c-8772-e2b31a88d5a1",
+    "tractate": "סנהדרין",
+    "daf": "21",
+    "amud": "a",
+    "raw_reference": "סנהדרין כא, יא",
+    "source": "ai",
+    "why": "המספר השני (יא=11) אינו עמוד"
+  },
+  {
+    "id": "e6be73fa-b803-47a6-bbf5-6bab2ebe05a1",
+    "tractate": "בבא קמא",
+    "daf": "10",
+    "amud": "a",
+    "raw_reference": "ב\"ק י,יא",
+    "source": "ai",
+    "why": "המספר השני (יא=11) אינו עמוד"
+  },
+  {
+    "id": "35efd49f-2aac-4da4-b733-80425b1aea71",
+    "tractate": "בבא בתרא",
+    "daf": "4",
+    "amud": null,
+    "raw_reference": "ב\"ב ד,ד",
+    "source": "ai",
+    "why": "המספר השני (ד=4) אינו עמוד"
+  },
+  {
+    "id": "020daec2-8027-4c74-85b0-0be5f2c4ed8a",
+    "tractate": "בבא מציעא",
+    "daf": "7",
+    "amud": "b",
+    "raw_reference": "בבא מציעא ז, יז",
+    "source": "ai",
+    "why": "המספר השני (יז=17) אינו עמוד"
+  },
+  {
+    "id": "a0fe4717-1c60-4d8b-8655-95a92ad519a8",
+    "tractate": "בבא קמא",
+    "daf": "66",
+    "amud": null,
+    "raw_reference": "בסימן סו, מ",
+    "source": "ai",
+    "why": "המספר השני (מ=40) אינו עמוד"
+  },
+  {
+    "id": "291df5e3-3114-4499-88b1-9552ee58ca70",
+    "tractate": "סנהדרין",
+    "daf": "3",
+    "amud": "b",
+    "raw_reference": "רא\"ש סנהדרין ג,כה",
+    "source": "ai",
+    "why": "המספר השני (כה=25) אינו עמוד"
+  },
+  {
+    "id": "cdb1be13-cd4d-4830-89f2-436df735bdfb",
+    "tractate": "בבא קמא",
+    "daf": "19",
+    "amud": "b",
+    "raw_reference": "הגרש\"ש בחידושיו לב\"ק סי' יט,ו",
+    "source": "ai",
+    "why": "המספר השני (ו=6) אינו עמוד"
+  },
+  {
+    "id": "41f13dd1-9b9e-4575-be67-79130656f52b",
+    "tractate": "בבא קמא",
+    "daf": "8",
+    "amud": "b",
+    "raw_reference": "ב\"ק ח,ס",
+    "source": "ai",
+    "why": "המספר השני (ס=60) אינו עמוד"
+  },
+  {
+    "id": "f7c0ced5-6e10-4a02-a396-6a85f54ac855",
+    "tractate": "בבא קמא",
+    "daf": "2",
+    "amud": "b",
+    "raw_reference": "בב\"ק ב,ו",
+    "source": "ai",
+    "why": "המספר השני (ו=6) אינו עמוד"
+  },
+  {
+    "id": "d7b2e616-0410-4d1c-a453-bc154b95f370",
+    "tractate": "בבא קמא",
+    "daf": "104",
+    "amud": "b",
+    "raw_reference": "חו\"מ קד,ד",
+    "source": "ai",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "e12b9e9e-e423-4b9e-a857-0d475b808f0a",
+    "tractate": "עבודה זרה",
+    "daf": "5",
+    "amud": null,
+    "raw_reference": "ע\"ז ה,לה",
+    "source": "ai",
+    "why": "המספר השני (לה=35) אינו עמוד"
+  },
+  {
+    "id": "e5ddb092-2124-4335-9124-402609811548",
+    "tractate": "קידושין",
+    "daf": "2",
+    "amud": null,
+    "raw_reference": "קדושין ב,יא",
+    "source": "ai",
+    "why": "המספר השני (יא=11) אינו עמוד"
+  },
+  {
+    "id": "2622b5bd-f05d-480b-a29a-65ac5d6d73cf",
+    "tractate": "בבא קמא",
+    "daf": "34",
+    "amud": null,
+    "raw_reference": "בחו\"מ סי' ל\"ד",
+    "source": "ai",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "8e0feef9-cc95-4594-a5cb-028740f9dad4",
+    "tractate": "שבועות",
+    "daf": "41",
+    "amud": "a",
+    "raw_reference": "בגמ' שבועות מא,א, ובשו\"ע חו\"מ פב,ב.",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "45ae10f3-23d7-442a-9c07-325d578d8600",
+    "tractate": "בבא מציעא",
+    "daf": "83",
+    "amud": "a",
+    "raw_reference": "מובא בשו\"ע ס'",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "1289a207-42b1-41c2-97d3-7aa247eb8039",
+    "tractate": "כתובות",
+    "daf": "16",
+    "amud": "b",
+    "raw_reference": "בכתובות טז,ב, ע",
+    "source": "site-index",
+    "why": "המספר השני (ע=70) אינו עמוד"
+  },
+  {
+    "id": "8913afe5-a5fe-40fe-bf75-361a91846e3a",
+    "tractate": "בבא בתרא",
+    "daf": "18",
+    "amud": "a",
+    "raw_reference": "דהגמ' דף יח. ה",
+    "source": "site-index",
+    "why": "המספר השני (ה=5) אינו עמוד"
+  },
+  {
+    "id": "3d984e07-09bd-4f2e-8d4e-abf6ed373b9b",
+    "tractate": "גיטין",
+    "daf": "72",
+    "amud": "b",
+    "raw_reference": "גיה בגיטין ע״ב ונפסק בשו״ע חו״מ רנ״ה",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "2182b1d2-3f6b-4d66-8ecf-17cc6081dbff",
+    "tractate": "בבא מציעא",
+    "daf": "56",
+    "amud": "b",
+    "raw_reference": "ב\"מ נו, ב והשו''ע רכז,לד",
+    "source": "site-index",
+    "why": "המספר השני (לד=34) אינו עמוד"
+  },
+  {
+    "id": "10f14a55-fd95-45b8-8789-b84900c851dc",
+    "tractate": "בבא מציעא",
+    "daf": "106",
+    "amud": "a",
+    "raw_reference": "(ב\"מ ק\"ה ע\"ב - ק\"ו ע\"א) ובשו\"ע (סי' שכ\"ב ס\"א)",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "77be03a2-4111-4f90-b0b5-8347db91ece7",
+    "tractate": "בבא מציעא",
+    "daf": "66",
+    "amud": "a",
+    "raw_reference": "בב\"מ סו, ו",
+    "source": "site-index",
+    "why": "המספר השני (ו=6) אינו עמוד"
+  },
+  {
+    "id": "8cfe31ad-580f-4195-9237-9cccbce5a37e",
+    "tractate": "בבא בתרא",
+    "daf": "40",
+    "amud": "b",
+    "raw_reference": "חו\"מ רמב,א על פי ב\"ב מ:",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "dd66103b-db07-4257-a796-14cae07e506f",
+    "tractate": "בבא קמא",
+    "daf": "99",
+    "amud": "b",
+    "raw_reference": "חו\"מ סי' שו סע' ו , ע\"פ בבא קמא צט ע\"ב)",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "6be1b6da-b6d1-4cb9-91f3-8a737d448304",
+    "tractate": "בבא בתרא",
+    "daf": "2",
+    "amud": "a",
+    "raw_reference": "בבא בתרא דף ב. במ",
+    "source": "site-index",
+    "why": "המספר השני (במ=42) אינו עמוד"
+  },
+  {
+    "id": "5d7e0a07-e42d-4d9b-ae67-2a5cf2bc153c",
+    "tractate": "בבא בתרא",
+    "daf": "41",
+    "amud": "a",
+    "raw_reference": "והשאלה הזו היא מחלוקת רמב\"ם ורא\"ש מובאת בטור חו\"מ יז,",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "501d5162-cf69-45c4-907c-fd14e5230726",
+    "tractate": "גיטין",
+    "daf": "37",
+    "amud": "b",
+    "raw_reference": "והשאלה הזו היא מחלוקת רמב\"ם ורא\"ש מובאת בטור חו\"מ יז,",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "8e4fe26f-e0ee-4e41-926c-6eaa45238285",
+    "tractate": "סנהדרין",
+    "daf": "29",
+    "amud": "a",
+    "raw_reference": "והשאלה הזו היא מחלוקת רמב\"ם ורא\"ש מובאת בטור חו\"מ יז,",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "e531b861-1574-4d02-a530-81c8d0bc2925",
+    "tractate": "בבא מציעא",
+    "daf": "115",
+    "amud": null,
+    "raw_reference": "ב\"מ קטו,א ובשו\"ע חו\"מ צז,יד.",
+    "source": "site-index",
+    "why": "קיצור ספר פוסק"
+  },
+  {
+    "id": "13dc3856-69ee-4479-ba92-a9ada78a4421",
+    "tractate": "בבא בתרא",
+    "daf": "8",
+    "amud": "b",
+    "raw_reference": "בבא בתרא, ח",
+    "source": "site-index",
+    "why": "המספר השני (ח=8) אינו עמוד"
+  }
+]
