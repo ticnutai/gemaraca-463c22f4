@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "local": "node scripts/run-local.mjs",
+    "local:api": "node scripts/local-api.mjs",
+    "local:mirror": "node scripts/mirror-cloud-to-local.mjs --verify",
+    "local:rebuild": "node scripts/build-local-db.mjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "analyze": "vite build --mode analyze",

@@ -85,3 +85,9 @@ scripts/data/psakim_org_tree.json
 
 # עותק בטיחות של קאש gov.il לפני חילוץ מחדש עם הערות שוליים — 146 מ"ב, זמני
 scripts/data/govil_old/
+
+# המסד המקומי — נבנה מחדש ב-npm run local:mirror, 700 מ"ב
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.db.building*
