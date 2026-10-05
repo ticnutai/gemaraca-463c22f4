@@ -268,15 +268,17 @@ if (!SKIP_STORAGE) {
     }
     console.log(`  … ${b.name}: ${listed} מסריקה, ${paths.size} אחרי איחוד עם המסד`);
 
-    // מה שכבר ירד בהרצה קודמת אינו יורד שוב
-    const already = new Set(existsSync(dir) ? readdirSync(dir) : []);
+    // הנתיב נשמר בדיוק כפי שהוא בענן, כולל תיקיות משנה. שיטוח השמות
+    // ל-`a__b` שבר את הקישורים: הכתובות במסד מצביעות על `a/b`, ובהעלאה
+    // חזרה הקובץ לא נמצא. מה שכבר ירד בהרצה קודמת אינו יורד שוב.
     let skipped = 0;
     for (const path of paths) {
-      const flat = path.replace(/[/\\]/g, '__');
-      if (already.has(flat)) { skipped++; got++; continue; }
+      const target = join(dir, ...path.split('/'));
+      if (existsSync(target)) { skipped++; got++; continue; }
       const { data: blob, error } = await sb.storage.from(b.name).download(path);
       if (error || !blob) { failed++; continue; }
-      writeFileSync(join(dir, flat), Buffer.from(await blob.arrayBuffer()));
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, Buffer.from(await blob.arrayBuffer()));
       got++;
       if (got % 250 === 0) process.stdout.write(`\r  … ${got}/${paths.size} קבצים     `);
     }
@@ -324,8 +326,8 @@ for f in 02_data/*.sql; do psql "$DATABASE_URL" -f "$f"; done
 ### 3. האחסון
 ${buckets.map((b) => `- דלי \`${b.name}\`${b.public ? ' (ציבורי)' : ''} — ${b.files} קבצים`).join('\n') || '- אין'}
 
-שמות הקבצים שוטחו: \`/\` הוחלף ב-\`__\`. בהעלאה חזרה יש להמיר בחזרה,
-אחרת ה-\`source_url\` שבמסד לא יתאים.
+הנתיבים נשמרים בדיוק כמו בענן, כולל תיקיות משנה, כדי שה-\`source_url\`
+שבמסד יתאים לקובץ בהעלאה חזרה.
 
 ### 4. חיבור האפליקציה
 ב-\`.env\`:

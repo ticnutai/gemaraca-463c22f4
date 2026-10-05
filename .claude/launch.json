@@ -1,6 +1,28 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "gemaraca", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 8080 }
+    {
+      "name": "gemaraca",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "gemaraca-new-db",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--outDir",
+        "dist-new",
+        "--port",
+        "4178",
+        "--strictPort"
+      ],
+      "port": 4178
+    }
   ]
 }

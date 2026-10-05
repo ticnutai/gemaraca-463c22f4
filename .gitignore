@@ -97,3 +97,10 @@ scripts/data/ein_mishpat/
 
 # ייצוא נייד — 900+ מ"ב, נבנה מחדש ב-export-full-project.mjs
 export/
+
+# הגדרות הפרויקט החדש (ציבוריות, אבל לא נכנסות לריפו כדי לא לבלבל את Lovable)
+.env.new-supabase
+.env.newdb
+
+# תיקיית בנייה לבדיקה מול המסד החדש
+dist-new/

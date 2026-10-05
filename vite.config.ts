@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { readFileSync } from "fs";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import { visualizer } from "rollup-plugin-visualizer";
@@ -66,6 +67,33 @@ function ocrServerLauncher(): Plugin {
     },
   };
 }
+
+/**
+ * כתובת הסופאבייס נקראת מקובץ .env ולא מקודדת בקוד, כדי שהעברת הפרויקט
+ * למסד אחר תדרוש שינוי של משתנה סביבה אחד בלבד. אם הקריאה נכשלת, כללי
+ * המטמון של ה-PWA פשוט לא יתפסו — האתר עובד, רק בלי מטמון לקריאות ה-API.
+ */
+const supabaseHost = (() => {
+  // משתנה סביבה גובר על הקובץ, כדי שאפשר יהיה לבנות מול מסד אחר
+  // בלי לגעת ב-.env — כך גם וורסל מגדיר את הכתובת בזמן הבנייה.
+  let url = process.env.VITE_SUPABASE_URL;
+  if (!url) {
+    try {
+      const envFile = readFileSync(path.resolve(__dirname, ".env"), "utf8");
+      url = envFile.match(/^VITE_SUPABASE_URL="?([^"\r\n]+)"?/m)?.[1];
+    } catch {
+      /* אין קובץ .env — כללי המטמון פשוט לא ייווצרו */
+    }
+  }
+  try {
+    return url ? new URL(url).host : "";
+  } catch {
+    return "";
+  }
+})();
+
+const supabasePattern = (suffix: string) =>
+  new RegExp(`^https://${supabaseHost.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/${suffix}`, "i");
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -134,12 +162,12 @@ export default defineConfig(({ mode }) => ({
           },
           {
             // Backup history must always be live (listed right after a backup runs)
-            urlPattern: /^https:\/\/jaotdqumpcfhcbkgtfib\.supabase\.co\/rest\/v1\/(data_backups|data_restores|user_roles)\b.*/i,
+            urlPattern: supabasePattern("rest/v1/(data_backups|data_restores|user_roles)\\b.*"),
             handler: 'NetworkOnly',
           },
           {
             // Cache Supabase API responses — show cached, refresh in background
-            urlPattern: /^https:\/\/jaotdqumpcfhcbkgtfib\.supabase\.co\/rest\/v1\/.*/i,
+            urlPattern: supabasePattern("rest/v1/.*"),
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'supabase-api-cache',
@@ -148,7 +176,7 @@ export default defineConfig(({ mode }) => ({
           },
           {
             // Cache Supabase Edge Functions responses
-            urlPattern: /^https:\/\/jaotdqumpcfhcbkgtfib\.supabase\.co\/functions\/v1\/.*/i,
+            urlPattern: supabasePattern("functions/v1/.*"),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-functions-cache',

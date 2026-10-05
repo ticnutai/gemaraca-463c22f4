@@ -1,0 +1,14 @@
+# מה שלא צריך להישלח לוורסל. בלי זה נשלחים 27 אלף קבצים והפריסה נדחית.
+export/
+data/
+scripts/data/
+backups/
+tmp-checks/
+dist-new/
+playwright-report/
+test-results/
+e2e/
+*.db
+*.db-shm
+*.db-wal
+*.db.building

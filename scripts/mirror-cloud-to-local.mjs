@@ -63,19 +63,31 @@ async function discoverTables() {
     try { walk(join(ROOT, d)); } catch { /* אין תיקייה */ }
   }
   // שמות שאינם טבלאות (דליי אחסון וכדומה) ייפלו מעצמם עם הודעת דילוג
-  const names = [...found].sort();
-  console.log(`   מן הקוד: ${names.length} שמות טבלאות`);
-  return names.length ? names : null;
+  const fromCode = [...found];
+  const names = [...new Set([...SCHEMA_TABLES, ...fromCode])].sort();
+  console.log(`   מן הקוד: ${fromCode.length} שמות · יחד עם הסכימה: ${names.length}`);
+  return names;
 }
 
-const FALLBACK_TABLES = [
-  'psakei_din', 'talmud_references', 'psak_sources', 'sugyot', 'sugya_psak_links',
-  'pattern_sugya_links', 'smart_index_results', 'folders', 'psak_folders',
-  'text_annotations', 'user_books', 'user_preferences', 'user_pinned_items',
-  'user_prompt_templates', 'user_roles', 'learning_history', 'flashcards',
-  'daf_yomi_progress', 'glossary_terms', 'upload_sessions', 'data_backups',
-  'shas_download_progress',
+/**
+ * 32 הטבלאות שקיימות בפועל במסד, כפי שנקראו מן הסכימה עצמה.
+ * הגזירה מן הקוד לבדה פספסה את user_books ואת server_diagnostics —
+ * 114 ספרי משתמש נשארו מחוץ למראה בלי שאיש שם לב. לכן הרשימה הזאת
+ * מתאחדת תמיד עם מה שנמצא בקוד, ולא משמשת רק כגיבוי.
+ */
+const SCHEMA_TABLES = [
+  'data_backups', 'data_restores', 'ein_mishpat', 'faq_items', 'folder_categories',
+  'function_logs', 'gemara_edit_snapshots', 'gemara_pages', 'masechtot_daf_limits',
+  'migration_history', 'modern_examples', 'page_typography_settings',
+  'pattern_sugya_links', 'pdf_annotations', 'psak_sections', 'psak_source_registry',
+  'psak_sources', 'psakei_din', 'schema_snapshots', 'server_diagnostics',
+  'shas_download_progress', 'shas_pdf_pages', 'smart_index_results',
+  'sugya_psak_links', 'talmud_references', 'text_annotations', 'upload_sessions',
+  'user_books', 'user_pinned_items', 'user_preferences', 'user_prompt_templates',
+  'user_roles',
 ];
+
+const FALLBACK_TABLES = SCHEMA_TABLES;
 
 const env = Object.fromEntries(readFileSync(join(ROOT, '.env'), 'utf8').split(/\r?\n/)
   .map((l) => l.match(/^([A-Z_]+)="?([^"\r]*)"?$/)).filter(Boolean).map((m) => [m[1], m[2]]));
