@@ -6,7 +6,7 @@
   "sha256": "fe5d81e6fb1edb92c1f88008d76967cbe645468ba7d6cde15fa44f30e1c33ac2"
  },
  "bava_batra": {
-  "built": "2026-10-04",
+  "built": "2026-10-05",
   "file": "בבא בתרא.pdf",
   "pages": 350,
   "sha256": "4670723a9605b93f03bd31598db99c48a8a42f8abeb1f70679c4e53b39142077"
@@ -24,7 +24,7 @@
   "sha256": "c5e36d9495c4fc7fd03729671f26d4ba39137774b94cc7fa4b7423c565b2a28f"
  },
  "berakhot": {
-  "built": "2026-10-04",
+  "built": "2026-10-05",
   "file": "ברכות.pdf",
   "pages": 125,
   "sha256": "bcf8e3349ad99a4ad62a682bfb3197ed763c546ba0502638eeaa2711f1ac8874"
@@ -36,7 +36,7 @@
   "sha256": "eebc8aa5b2b39581f9d7c7344b5554ae0896851e297f4237d8289535fb3d99e4"
  },
  "horayot": {
-  "built": "2026-10-04",
+  "built": "2026-10-05",
   "file": "הוריות.pdf",
   "pages": 25,
   "sha256": "dcaa7f2e7259c0fecb6a80190ea931307a9135927c2ab13a645e1b1c31b1871c"
@@ -102,7 +102,7 @@
   "sha256": "b1bd0b835da1ee26848319857bd369215deb5ef47204219c747a8649eeb33d59"
  },
  "taanit": {
-  "built": "2026-10-04",
+  "built": "2026-10-05",
   "file": "תענית.pdf",
   "pages": 59,
   "sha256": "3b09cd4c305094ccd6e1d2ec69541741bd2f2db957232cbcb1942670a5efe384"
