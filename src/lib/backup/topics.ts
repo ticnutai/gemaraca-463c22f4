@@ -21,8 +21,8 @@ export const BACKUP_TOPICS: BackupTopic[] = [
   {
     id: "gemara",
     label: "גמרא ותוכן ש\"ס",
-    description: "דפי גמרא, דוגמאות מודרניות, עריכות, סריקות ש\"ס והתקדמות הורדה",
-    tables: ["gemara_pages", "modern_examples", "gemara_edit_snapshots", "shas_pdf_pages", "shas_download_progress"],
+    description: "דפי גמרא, דוגמאות מודרניות, עריכות והתקדמות הורדה",
+    tables: ["gemara_pages", "modern_examples", "gemara_edit_snapshots", "shas_download_progress"],
     buckets: [],
   },
   {
@@ -63,9 +63,9 @@ export const BACKUP_TOPICS: BackupTopic[] = [
   {
     id: "files",
     label: "קבצים (אחסון)",
-    description: "קבצי פסקי הדין, סריקות ש\"ס וספרים שהועלו",
+    description: "קבצי פסקי הדין וספרים שהועלו",
     tables: [],
-    buckets: ["psakei-din-files", "shas-pdf-pages", "user-books"],
+    buckets: ["psakei-din-files", "user-books"],
   },
 ];
 
@@ -86,7 +86,6 @@ export const TABLE_LABELS: Record<string, string> = {
   gemara_pages: "דפי גמרא",
   modern_examples: "דוגמאות מודרניות",
   gemara_edit_snapshots: "עריכות גמרא",
-  shas_pdf_pages: "סריקות ש\"ס (רשומות)",
   shas_download_progress: "התקדמות הורדת ש\"ס",
   talmud_references: "הפניות תלמודיות",
   sugya_psak_links: "קישורי סוגיה-פסק",
@@ -106,7 +105,6 @@ export const TABLE_LABELS: Record<string, string> = {
 
 export const BUCKET_LABELS: Record<string, string> = {
   "psakei-din-files": "קבצי פסקי דין",
-  "shas-pdf-pages": "סריקות ש\"ס (PDF)",
   "user-books": "קבצי ספרים אישיים",
 };
 

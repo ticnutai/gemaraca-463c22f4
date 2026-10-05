@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, BookOpen, Scale, ExternalLink, Lightbulb, FileText, HelpCircle, ChevronLeft, Home, Layers, ScrollText } from "lucide-react";
+import { ArrowRight, BookOpen, Scale, ExternalLink, Lightbulb, FileText, HelpCircle, ChevronLeft, Home, Layers } from "lucide-react";
+import { parseSugyaId } from "@/lib/sugyaId";
 import DafAmudNavigator from "@/components/DafAmudNavigator";
 import DafPickerDialog, { trackDafVisit } from "@/components/DafPickerDialog";
 import {
@@ -20,7 +21,6 @@ import PsakDinSearchButton from "@/components/PsakDinSearchButton";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-const TzuratHaDafPanel = lazy(() => import("@/components/daf/TzuratHaDafPanel"));
 const EinMishpatPanel = lazy(() => import("@/components/EinMishpatPanel"));
 import { MASECHTOT } from "@/lib/masechtotData";
 import { getCachedPage, setCachedPage } from "@/lib/pageCache";
@@ -28,7 +28,7 @@ import { toHebrewNumeral } from "@/lib/hebrewNumbers";
 import { recordPageVisit, updateVisitDuration } from "@/components/LearningHistoryTab";
 
 // Lazy-loaded heavy sub-panels
-const GemaraTextPanel = lazy(() => import("@/components/GemaraTextPanel"));
+const GemaraDafView = lazy(() => import("@/components/daf/GemaraDafView"));
 const CommentariesPanel = lazy(() => import("@/components/CommentariesPanel"));
 const LexiconSearch = lazy(() => import("@/components/LexiconSearch"));
 const RelatedPsakimSidebar = lazy(() => import("@/components/RelatedPsakimSidebar"));
@@ -100,20 +100,6 @@ const getMasechetHebrewName = (sefariaName: string): string => {
   return masechet?.hebrewName || sefariaName;
 };
 
-// Parse sugya_id like "bava_batra_2a" into masechet + daf + amud
-const parseSugyaId = (sugyaId: string) => {
-  for (const m of MASECHTOT) {
-    const prefix = m.sefariaName.toLowerCase() + '_';
-    if (sugyaId.startsWith(prefix)) {
-      const rest = sugyaId.slice(prefix.length);
-      const match = rest.match(/^(\d+)([ab])$/);
-      if (match) {
-        return { masechet: m, dafNumber: parseInt(match[1]), amud: match[2] as 'a' | 'b' };
-      }
-    }
-  }
-  return null;
-};
 
 const SugyaDetail = () => {
   const { id } = useParams();
@@ -456,10 +442,6 @@ const SugyaDetail = () => {
               <BookOpen className="w-4 h-4 hidden sm:block" />
               גמרא
             </TabsTrigger>
-            <TabsTrigger value="tzurat" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
-              <ScrollText className="w-4 h-4 hidden sm:block" />
-              צורת הדף
-            </TabsTrigger>
             <TabsTrigger value="commentaries" className="flex items-center gap-1.5 py-2.5 px-3 shrink-0 text-xs sm:text-sm">
               <BookOpen className="w-4 h-4 hidden sm:block" />
               מפרשים
@@ -486,36 +468,27 @@ const SugyaDetail = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: גמרא - Gemara Text with nested tabs */}
-          <TabsContent value="gemara" className="mt-0 space-y-6">
-            {/* Single rendering of GemaraTextPanel — no duplicate "לשון הגמרא" card,
-                no nested tabs (commentaries/lexicon/illustrations are now top-level). */}
-            <SectionErrorBoundary section="טקסט גמרא">
-              <Suspense fallback={<PanelFallback />}>
-                <GemaraTextPanel sugyaId={id || ""} dafYomi={sugya.dafYomi} masechet={sugya.masechet} />
-              </Suspense>
-            </SectionErrorBoundary>
-          </TabsContent>
-
-          {/* צורת הדף — העמוד כפי שהוא בדפוס וילנא, מטקסט מקומי ולא מסריקה */}
-          <TabsContent value="tzurat" className="mt-0">
+          {/* גמרא — צורת הדף או טקסט, באותה לשונית */}
+          <TabsContent value="gemara" className="mt-0">
             {(() => {
               const parsed = id ? parseSugyaId(id) : null;
               if (!parsed) {
                 return (
                   <p className="py-16 text-center text-muted-foreground">
-                    לא ניתן לזהות מאיזה דף הסוגיה הזו, ולכן אין מה לצייר.
+                    לא ניתן לזהות מאיזה דף הסוגיה הזו, ולכן אין מה להציג.
                   </p>
                 );
               }
               return (
                 <div className="space-y-6">
-                  <SectionErrorBoundary section="צורת הדף">
-                    <TzuratHaDafPanel
-                      masechet={parsed.masechet.hebrewName}
-                      daf={parsed.dafNumber}
-                      amud={parsed.amud}
-                    />
+                  <SectionErrorBoundary section="גמרא">
+                    <Suspense fallback={<PanelFallback />}>
+                      <GemaraDafView
+                        masechet={parsed.masechet.hebrewName}
+                        daf={parsed.dafNumber}
+                        amud={parsed.amud}
+                      />
+                    </Suspense>
                   </SectionErrorBoundary>
                   {/* עין משפט — מה נפסק להלכה מן הדף שלפניך */}
                   <SectionErrorBoundary section="עין משפט">

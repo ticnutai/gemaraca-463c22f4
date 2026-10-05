@@ -109,19 +109,8 @@ export function setCachedPage(sugyaId: string, pageData: unknown): void {
   saveToIDB(pageStore, sugyaId, pageData);
 }
 
-// Gemara text cache functions
-export function getCachedGemaraText(ref: string): unknown | null {
-  const entry = memoryCache.get(`text:${ref}`);
-  if (entry && Date.now() - entry.timestamp < CACHE_DURATION) return entry.data;
-  getFromIDB(textStore, ref).then(data => {
-    if (data) memoryCache.set(`text:${ref}`, { data, timestamp: Date.now() });
-  });
-  return getFromLocalStorage(`text:${ref}`);
-}
-
-export function setCachedGemaraText(ref: string, textData: unknown): void {
-  saveToIDB(textStore, ref, textData);
-}
+// טקסט הגמרא נטען היום מקבצים מקומיים (public/shas-ws וכו'), ולכן אין לו
+// מטמון כאן. textStore נשאר רק כדי שניקוי המטמון ימחק נתונים ישנים שנשמרו בו.
 
 // Clear all caches
 export function clearAllCaches(): void {

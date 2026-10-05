@@ -17,7 +17,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const EmbedPdfViewerPage = lazy(() => import("./pages/EmbedPdfViewerPage"));
-const ShasManagerPage = lazy(() => import("./pages/ShasManagerPage"));
 
 // Lazy-loaded global overlays — only loaded when actually needed
 const SettingsButton = lazy(() => import("./components/SettingsButton").then(m => ({ default: m.SettingsButton })));
@@ -63,7 +62,6 @@ const App = () => (
               <Route path="/" element={<AppLayout><Index /></AppLayout>} />
               <Route path="/sugya/:id" element={<AppLayout><SugyaDetail /></AppLayout>} />
               <Route path="/embedpdf-viewer" element={<EmbedPdfViewerPage />} />
-              <Route path="/shas-manager" element={<AppLayout><ShasManagerPage /></AppLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>

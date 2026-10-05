@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense, startTransition } from "react";
+import { parseSugyaId } from "@/lib/sugyaId";
 import { usePsakimForDaf, DafPsak } from "@/hooks/usePsakimForDaf";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +56,7 @@ import SummaryToggle from "./SummaryToggle";
 import { useDocumentViewer } from "./DocumentViewerProvider";
 import { toast } from "sonner";
 
-const GemaraTextPanel = lazy(() => import("@/components/GemaraTextPanel"));
+const GemaraTextView = lazy(() => import("@/components/daf/GemaraTextView"));
 
 const PSAK_VIEW_MODE_KEY = 'psak-din-view-mode';
 const LAZY_BATCH = 12;
@@ -479,7 +480,12 @@ export default function PsakeiDinDafPanel({
             </div>
             <div className="h-[60vh] overflow-auto">
               <Suspense fallback={<div className="p-4 space-y-3"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /></div>}>
-                <GemaraTextPanel sugyaId={sugyaId} dafYomi={dafYomi} masechet={masechet} />
+                {(() => {
+                  const p = parseSugyaId(sugyaId);
+                  return p
+                    ? <GemaraTextView masechet={p.masechet.hebrewName} daf={p.dafNumber} amud={p.amud} />
+                    : <p className="p-4 text-sm text-muted-foreground">לא ניתן לזהות את הדף.</p>;
+                })()}
               </Suspense>
             </div>
           </Card>

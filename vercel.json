@@ -4,12 +4,12 @@
   ],
   "headers": [
     {
-      "source": "/shas/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "source": "/(shas|shas-ws|shas-wsraw|tzurat)/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800" }]
     },
     {
-      "source": "/tzurat/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "source": "/(shas-ws|shas-wsraw|tzurat/print)/(index|sources).json",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
     }
   ]
 }
