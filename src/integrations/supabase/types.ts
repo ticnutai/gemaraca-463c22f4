@@ -725,7 +725,7 @@ export type Database = {
           tags: string[] | null
           title: string
           updated_at: string
-          year: number
+          year: number | null
         }
         Insert: {
           beautify_count?: number
@@ -746,7 +746,7 @@ export type Database = {
           tags?: string[] | null
           title: string
           updated_at?: string
-          year: number
+          year?: number | null
         }
         Update: {
           beautify_count?: number
@@ -767,7 +767,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string
-          year?: number
+          year?: number | null
         }
         Relationships: []
       }
