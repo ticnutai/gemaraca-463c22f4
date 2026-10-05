@@ -475,10 +475,25 @@ export default function GemaraTextPanel({ sugyaId, dafYomi, masechet = "Bava_Bat
     }
   }, [cloudPdfUrl, dafYomi, gemaraText, sugyaId]);
 
+  /**
+   * ההכנה נעשית פעם אחת לכל סריקה, ולא עוד.
+   *
+   * בלי הזיכרון הזה נוצרה לולאה אינסופית למי שאינו מחובר: ההכנה מחזירה
+   * null (אין משתמש לשמור עבורו), ולכן `cloudEmbedBookId` נשאר ריק,
+   * `cloudEmbedError` נשאר ריק, ו-`cloudEmbedLoading` חוזר ל-false —
+   * כלומר בדיוק התנאי שמפעיל את ההכנה שוב. התוצאה: גלגל טעינה שלא
+   * נעצר לעולם, ובנוסף שעון ההצלה של חמש השניות שלמטה אוסף אתחול בכל
+   * סיבוב ולכן גם הוא לא מספיק לפעול. מחוברים לא ראו את זה, כי אצלם
+   * מזהה הספר נשמר ועוצר את המחזור.
+   */
+  const embedPreparedForRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (cloudSubMode === 'embedpdf' && cloudPdfUrl && !cloudEmbedBookId && !cloudEmbedLoading && !cloudEmbedError) {
-      void ensureCloudEmbedBook();
-    }
+    if (cloudSubMode !== 'embedpdf' || !cloudPdfUrl) return;
+    if (cloudEmbedBookId || cloudEmbedLoading || cloudEmbedError) return;
+    if (embedPreparedForRef.current === cloudPdfUrl) return;
+    embedPreparedForRef.current = cloudPdfUrl;
+    void ensureCloudEmbedBook();
   }, [cloudSubMode, cloudPdfUrl, cloudEmbedBookId, cloudEmbedLoading, cloudEmbedError, ensureCloudEmbedBook]);
 
   const cloudEmbedViewerSrc = useMemo(() => {
@@ -499,11 +514,26 @@ export default function GemaraTextPanel({ sugyaId, dafYomi, masechet = "Bava_Bat
     return `/embedpdf-viewer?${params.toString()}`;
   }, [cloudPdfUrl, cloudEmbedBookId, dafYomi, gemaraText, masechet, sugyaId]);
 
-  // Load contract: if EmbedPDF is still unresolved after 5s, fallback to scan with clear notice.
+  /**
+   * שעון הצלה: אם EmbedPDF לא נפתר תוך חמש שניות, עוברים לסריקה.
+   *
+   * השעון תלוי רק בסריקה ובמצב התצוגה. קודם הוא היה תלוי גם במצבי
+   * הטעינה, ולכן כל שינוי שלהם איפס את הספירה מחדש — כלומר דווקא
+   * במקרה התקוע, שבו המצבים מתחלפים בלי הרף, השעון לא הגיע לסופו
+   * אף פעם. הערכים הנוכחיים נקראים מתוך ref כדי שלא ייכנסו לתלויות.
+   */
+  const embedStateRef = useRef({ loading: false, src: '', error: null as string | null });
+  embedStateRef.current = {
+    loading: cloudEmbedLoading,
+    src: cloudEmbedViewerSrc,
+    error: cloudEmbedError,
+  };
+
   useEffect(() => {
     if (viewMode !== 'cloud' || cloudSubMode !== 'embedpdf' || !cloudPdfUrl) return;
     const timer = window.setTimeout(() => {
-      const unresolved = cloudEmbedLoading || (!cloudEmbedViewerSrc && !cloudEmbedError);
+      const { loading, src, error } = embedStateRef.current;
+      const unresolved = loading || (!src && !error);
       if (!unresolved) return;
       const notice = 'טעינת EmbedPDF התעכבה. עברנו אוטומטית לסריקה כדי למנוע תקיעה.';
       setCloudEmbedFallbackNotice(notice);
@@ -514,7 +544,7 @@ export default function GemaraTextPanel({ sugyaId, dafYomi, masechet = "Bava_Bat
     return () => {
       window.clearTimeout(timer);
     };
-  }, [viewMode, cloudSubMode, cloudPdfUrl, cloudEmbedLoading, cloudEmbedViewerSrc, cloudEmbedError]);
+  }, [viewMode, cloudSubMode, cloudPdfUrl]);
 
   useEffect(() => {
     if (viewMode !== 'cloud') return;
