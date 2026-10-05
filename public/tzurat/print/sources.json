@@ -12,7 +12,7 @@
   "sha256": "4670723a9605b93f03bd31598db99c48a8a42f8abeb1f70679c4e53b39142077"
  },
  "bava_kamma": {
-  "built": "2026-10-04",
+  "built": "2026-10-05",
   "file": "בבא קמא.pdf",
   "pages": 236,
   "sha256": "a5dd73812ef4705c8e755a23ec119ee8f79b5cb5163ea1a92f5db1345fa14d94"
@@ -48,7 +48,7 @@
   "sha256": "8bdcd4267b75af4e001b156fcfb07b91a4f2b042c44e438c9a1adb6667fc2445"
  },
  "kiddushin": {
-  "built": "2026-10-04",
+  "built": "2026-10-05",
   "file": "קידושין.pdf",
   "pages": 162,
   "sha256": "092ac0a9a72d354405c9f7f8995a5e8681b24f86483ce153c60150cc7a248b5e"
@@ -60,7 +60,7 @@
   "sha256": "e6d24d1befab390498a9119c55177a9b1179d6996d36ad18a0e55a14b8d37f1b"
  },
  "megillah": {
-  "built": "2026-10-04",
+  "built": "2026-10-05",
   "file": "מגילה.pdf",
   "pages": 61,
   "sha256": "a8fee881216bca228ac955f2660c2e0864b91687ea3b335106e59d8233e1aa99"
@@ -84,7 +84,7 @@
   "sha256": "71750f8982c04395f3dedb1c02bd7e0af9063a70e96479d09f0414f5f7049bdc"
  },
  "shabbat": {
-  "built": "2026-10-04",
+  "built": "2026-10-05",
   "file": "שבת.pdf",
   "pages": 312,
   "sha256": "9ff2405d787a40a0a13bdb8d88647b04103aa439b78677cccd672ae098346eb1"
