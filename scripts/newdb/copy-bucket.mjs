@@ -7,9 +7,31 @@
  *   node scripts/newdb/copy-bucket.mjs --list
  *   node scripts/newdb/copy-bucket.mjs user-books shas-pdf-pages
  */
-import { join } from 'path';
+import { join, extname } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { ROOT, NEW_URL, NEW_KEY, ADMIN_EMAIL, ADMIN_PASSWORD, readEnvFile } from './env.mjs';
+
+/**
+ * דלי `psakei-din-files` מגביל את סוגי הקבצים המותרים. לחלק מן הקבצים
+ * בענן הישן אין סוג רשום, וברירת המחדל `application/octet-stream` אינה
+ * ברשימה — 2,021 קבצים נדחו בגללה. לכן הסוג נגזר מן הסיומת.
+ */
+const MIME = {
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.txt': 'text/plain',
+  '.rtf': 'application/rtf',
+  '.html': 'text/html',
+  '.htm': 'text/html',
+  '.zip': 'application/zip',
+};
+const mimeOf = (path, fromCloud) => {
+  const byExt = MIME[extname(path).toLowerCase()];
+  if (byExt) return byExt;
+  if (fromCloud && fromCloud !== 'application/octet-stream') return fromCloud;
+  return 'application/octet-stream';
+};
 
 const old = readEnvFile(join(ROOT, '.env'));
 const src = createClient(old.VITE_SUPABASE_URL, old.VITE_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } });
@@ -74,7 +96,7 @@ for (const bucket of (targets.length ? targets : BUCKETS)) {
       if (dl.error || !dl.data) { fail++; firstErr ||= `${f.path}: ${dl.error?.message}`; continue; }
       const buf = Buffer.from(await dl.data.arrayBuffer());
       const up = await retry(`העלאה ${f.path}`, () =>
-        dst.storage.from(bucket).upload(f.path, buf, { contentType: f.type || 'application/octet-stream', upsert: true }));
+        dst.storage.from(bucket).upload(f.path, buf, { contentType: mimeOf(f.path, f.type), upsert: true }));
       if (up.error) { fail++; firstErr ||= `${f.path}: ${up.error.message}`; continue; }
       ok++;
       if ((ok + fail) % 50 === 0) process.stdout.write(`\r   ${ok} הועתקו, ${fail} נכשלו   `);

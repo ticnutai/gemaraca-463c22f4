@@ -1,5 +1,16 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "comment": "קבצי הדפים כבדים (עד 4MB) ולעולם אינם משתנים בלי שם חדש. בלי מטמון ארוך כל כניסה לדף מושכת אותם מחדש מהשרת, וזה בדיוק סוג העומס שמפעיל את הגנת הבוטים של וורסל.",
+      "source": "/shas/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/tzurat/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
   ]
 }
