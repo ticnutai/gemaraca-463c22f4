@@ -35,6 +35,12 @@
   "pages": 78,
   "sha256": "d5a63d7be21d04ed8d7981959659d86097c5a70cc012bda9bcb864992a5bfd84"
  },
+ "bekhorot": {
+  "built": "2026-10-06",
+  "file": "בכורות.pdf",
+  "pages": 119,
+  "sha256": "1dea3dde308e8533404df998c82e25b14d6624dc58f0b2e2c3f78f1569367311"
+ },
  "berakhot": {
   "built": "2026-10-06",
   "file": "ברכות.pdf",
@@ -142,6 +148,12 @@
   "file": "סוטה.pdf",
   "pages": 96,
   "sha256": "b1bd0b835da1ee26848319857bd369215deb5ef47204219c747a8649eeb33d59"
+ },
+ "sukkah": {
+  "built": "2026-10-06",
+  "file": "סוכה.pdf",
+  "pages": 110,
+  "sha256": "5f4d55a8b6518ba731cf93a46586fb48ca440c884e0025426686674f7db2bfd2"
  },
  "taanit": {
   "built": "2026-10-06",
