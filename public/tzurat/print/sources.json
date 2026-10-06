@@ -1,4 +1,10 @@
 {
+ "arakhin": {
+  "built": "2026-10-06",
+  "file": "ערכין.pdf",
+  "pages": 65,
+  "sha256": "fc553f635d44cfc4d39418f2d674a803e60e53b36b21fb7cf797d08842f5f025"
+ },
  "avodah_zarah": {
   "built": "2026-10-06",
   "file": "עבודה זרה.pdf",
@@ -23,6 +29,12 @@
   "pages": 235,
   "sha256": "c5e36d9495c4fc7fd03729671f26d4ba39137774b94cc7fa4b7423c565b2a28f"
  },
+ "beitzah": {
+  "built": "2026-10-06",
+  "file": "ביצה.pdf",
+  "pages": 78,
+  "sha256": "d5a63d7be21d04ed8d7981959659d86097c5a70cc012bda9bcb864992a5bfd84"
+ },
  "berakhot": {
   "built": "2026-10-06",
   "file": "ברכות.pdf",
@@ -46,6 +58,12 @@
   "file": "הוריות.pdf",
   "pages": 25,
   "sha256": "dcaa7f2e7259c0fecb6a80190ea931307a9135927c2ab13a645e1b1c31b1871c"
+ },
+ "keritot": {
+  "built": "2026-10-06",
+  "file": "כריתות.pdf",
+  "pages": 54,
+  "sha256": "40b518ff66f5ba2c8c593b5fda34f9ed88d178fb1ffae8210e3a866dbed1ffe9"
  },
  "ketubot": {
   "built": "2026-10-06",
@@ -130,6 +148,12 @@
   "file": "תענית.pdf",
   "pages": 59,
   "sha256": "3b09cd4c305094ccd6e1d2ec69541741bd2f2db957232cbcb1942670a5efe384"
+ },
+ "temurah": {
+  "built": "2026-10-06",
+  "file": "תמורה.pdf",
+  "pages": 65,
+  "sha256": "8f4bc62c24be9f4a6ceab402eaffd4cc5f01f4d85bc67770a4fe01d74e8eb1cc"
  },
  "yevamot": {
   "built": "2026-10-06",
