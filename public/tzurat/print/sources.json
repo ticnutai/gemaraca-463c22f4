@@ -167,6 +167,12 @@
   "pages": 312,
   "sha256": "9ff2405d787a40a0a13bdb8d88647b04103aa439b78677cccd672ae098346eb1"
  },
+ "shekalim": {
+  "built": "2026-10-06",
+  "file": "שקלים.pdf",
+  "pages": 42,
+  "sha256": "fe91042aa49ebf0b6dd8d2bf7d6e72eb0c6d89862a3b6201ca3dcf5a8ea6bbf6"
+ },
  "shevuot": {
   "built": "2026-10-06",
   "file": "שבועות.pdf",
