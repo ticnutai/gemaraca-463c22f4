@@ -53,6 +53,12 @@
   "pages": 51,
   "sha256": "eec17d0f0dbd52be83529e9d5a064eac2ae1d951acc7359ef4fb20e035098a2b"
  },
+ "eruvin": {
+  "built": "2026-10-06",
+  "file": "עירובין.pdf",
+  "pages": 207,
+  "sha256": "b2ec46734b511b9e7c5d6f4986a7cdad5ee3fb99df4d1e4655cc4c53eacce3cc"
+ },
  "gittin": {
   "built": "2026-10-06",
   "file": "גיטין.pdf",
