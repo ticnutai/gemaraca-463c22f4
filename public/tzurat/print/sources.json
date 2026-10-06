@@ -125,6 +125,12 @@
   "pages": 180,
   "sha256": "1ec026d28a778bf4b40672e48c88947d46e12de0e059c5b234bf7b7844241820"
  },
+ "pesachim": {
+  "built": "2026-10-06",
+  "file": "פסחים.pdf",
+  "pages": 240,
+  "sha256": "bd491eaa5197fd65d798597a0f91f75f44106ff97789aad5f39bcac20103ab97"
+ },
  "rosh_hashanah": {
   "built": "2026-10-06",
   "file": "ראש השנה.pdf",
