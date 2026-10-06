@@ -190,5 +190,11 @@
   "file": "יבמות.pdf",
   "pages": 242,
   "sha256": "97fe3a7efdbf2f7b51b39c012b67f976e5ac6799b0444d025e19fb639153b5be"
+ },
+ "yoma": {
+  "built": "2026-10-06",
+  "file": "יומא.pdf",
+  "pages": 173,
+  "sha256": "672f68b36224782cecd9b7e6fafec930a141c0a9107db8c9c8219660f1ec8a4d"
  }
 }
