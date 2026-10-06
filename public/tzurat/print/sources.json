@@ -107,6 +107,12 @@
   "pages": 41,
   "sha256": "6ff8e383efd63d16af1170e0002cf9db3e2de3dadc44af9ba25e03f51ef937e7"
  },
+ "menachot": {
+  "built": "2026-10-06",
+  "file": "מנחות.pdf",
+  "pages": 217,
+  "sha256": "f0ff01c9c0537d201f9fd0a65fca8abcc8f2c2473adb5cd135857adef7bf4b72"
+ },
  "moed_katan": {
   "built": "2026-10-06",
   "file": "מועד קטן.pdf",
