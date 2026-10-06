@@ -53,6 +53,12 @@
   "pages": 51,
   "sha256": "eec17d0f0dbd52be83529e9d5a064eac2ae1d951acc7359ef4fb20e035098a2b"
  },
+ "chullin": {
+  "built": "2026-10-06",
+  "file": "חולין.pdf",
+  "pages": 281,
+  "sha256": "4085874646171dde63b8fbb62a460ae59e94cd03d9da9260a27439a951272ff9"
+ },
  "eruvin": {
   "built": "2026-10-06",
   "file": "עירובין.pdf",
@@ -131,6 +137,12 @@
   "pages": 180,
   "sha256": "1ec026d28a778bf4b40672e48c88947d46e12de0e059c5b234bf7b7844241820"
  },
+ "niddah": {
+  "built": "2026-10-06",
+  "file": "נדה.pdf",
+  "pages": 143,
+  "sha256": "212e1d732df15a3df3c013e8df617192b3a5072bb96ba2e5d32a772146a2ba7d"
+ },
  "pesachim": {
   "built": "2026-10-06",
   "file": "פסחים.pdf",
@@ -196,5 +208,11 @@
   "file": "יומא.pdf",
   "pages": 173,
   "sha256": "672f68b36224782cecd9b7e6fafec930a141c0a9107db8c9c8219660f1ec8a4d"
+ },
+ "zevachim": {
+  "built": "2026-10-06",
+  "file": "זבחים.pdf",
+  "pages": 238,
+  "sha256": "c124649196578ced3a9d27856de7189c16333ab32341694eb841c2ec7763798c"
  }
 }
